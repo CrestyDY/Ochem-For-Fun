@@ -5,6 +5,7 @@ import HexagonButton
 from Time_Trial import Time_Trial  # Import the Time_Trial class
 
 
+
 class App:
     def __init__(self):
         self._running = True
@@ -13,8 +14,8 @@ class App:
         self.current_screen = "playground"
 
         # Background images
-        self.background_light = background.Background('background.jpg', [0, 0])
-        self.background_dark = background.Background('background-dark-mode.jpg', [0, 0])
+        self.background_light = background.Background('images/background.jpg', [0, 0])
+        self.background_dark = background.Background('images/background-dark-mode.jpg', [0, 0])
         self.current_background = self.background_dark
         self.dark_mode = True
         self.button_rect = pygame.Rect(1500, 0, 100, 50)
@@ -34,7 +35,7 @@ class App:
 
         # Title and Icon
         pygame.display.set_caption('Ochem Battle')
-        Icon = pygame.image.load('background.png')
+        Icon = pygame.image.load('images/background.png')
         pygame.display.set_icon(Icon)
 
         pygame.display.flip()
