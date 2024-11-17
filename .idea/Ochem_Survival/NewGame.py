@@ -3,6 +3,9 @@ import background
 from pygame.locals import *
 import HexagonButton
 from Time_Trial import Time_Trial  # Import the Time_Trial class
+import sys
+sys.path.insert(1, '/Ochem_Survival/Games')
+from Games import Most_Acidic
 
 
 
