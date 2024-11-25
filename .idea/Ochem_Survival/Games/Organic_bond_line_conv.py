@@ -3,7 +3,6 @@ from rdkit.Chem import Draw
 from PIL import Image, ImageDraw, ImageFont
 import random
 import Organic_sorted_by_pKa as sbp
-
 from rdkit import Chem
 from rdkit.Chem import Draw
 from PIL import Image

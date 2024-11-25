@@ -3,7 +3,6 @@ import sqlite3 as sql
 from io import BytesIO
 from PIL import Image
 
-ochem_table
 def Most_Acidic():
     ochem_database = sql.connect('ochem.db')
     cursor = ochem_database.cursor()
@@ -68,7 +67,6 @@ def Structure_To_Name():
     Wrong_Name3 = Wrong_compound3[1]
 
     Display_Image = Image.open(BytesIO(Correct_compound[0]))
-    Display_Image.show()
 
 def Name_To_Structure():
     ochem_database = sql.connect('Ochem.db')
