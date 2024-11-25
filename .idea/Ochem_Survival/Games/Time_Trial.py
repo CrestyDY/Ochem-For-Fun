@@ -44,8 +44,10 @@ class Time_Trial:
 
         # Minigames
         self.current_minigame = None
-        self.Minigame_list = rd.choices([1], k=100)
-        self.Minigame_dictionary = {1: "Most Acidic", 2: "Structure to Name", 3: "Name to Structure"}
+        self.Minigame_list = rd.choices([1, 2], k=100)  # Random selection of minigames
+        self.Minigame_dictionary = {1: "Most Acidic", 2: "Name To Structure"}
+        self.current_minigame_index = 0
+        self.question_answered = False
 
         # Button dimensions for answers
         self.button_width = 300
@@ -85,6 +87,12 @@ class Time_Trial:
             self.current_background = self.background_dark
         self.dark_mode = not self.dark_mode
 
+
+    def truncate_text(self, text, max_length=50):
+        if len(text) <= max_length:
+            return text
+        return text[:max_length] + '...'
+
     def setup_button_rects(self):
         """Create rectangles for the four answer buttons in a 2x2 grid"""
         start_x = self.playground_rect.x + 350
@@ -102,7 +110,6 @@ class Time_Trial:
         ]
 
     def load_new_question(self):
-        """Load a new set of compounds from the database"""
         try:
             ochem_database = sql.connect("ochem.db")
             cursor = ochem_database.cursor()
@@ -115,29 +122,52 @@ class Time_Trial:
 
             random_compounds = rd.sample(range(min_id, max_id + 1), 4)
 
-            extract_query = """
-                SELECT DISTINCT pH, chemical_formula, iupac, image_file 
-                FROM ochem_table WHERE id IN (?, ?, ?, ?);
-            """
-            cursor.execute(extract_query, random_compounds)
-            self.current_compounds = cursor.fetchall()
-            ochem_database.close()
+            if self.current_minigame == "Most Acidic":
+                extract_query = """
+                    SELECT DISTINCT pH, chemical_formula, iupac, image_file 
+                    FROM ochem_table WHERE id IN (?, ?, ?, ?);
+                """
+                cursor.execute(extract_query, random_compounds)
+                compounds = cursor.fetchall()
 
-            # Sort by pH to know which is most acidic
-            self.current_compounds = sorted(self.current_compounds, key=lambda x: x[0])
-            self.correct_answer = 0  # Index of most acidic compound
+                if not compounds:
+                    print("No compounds found for Most Acidic")
+                    return False
 
-            # Shuffle the compounds for display
-            display_order = list(range(4))
-            rd.shuffle(display_order)
-            self.current_compounds = [self.current_compounds[i] for i in display_order]
-            # Update correct_answer to track shuffled position
-            self.correct_answer = display_order.index(0)
+                # Sort by pH to know which is most acidic
+                compounds = sorted(compounds, key=lambda x: x[0])
+                self.correct_answer = 0  # Index of most acidic compound
 
-            # Cache the images
+                # Shuffle the compounds for display
+                display_order = list(range(4))
+                rd.shuffle(display_order)
+                self.current_compounds = [compounds[i] for i in display_order]
+                # Update correct_answer to track shuffled position
+                self.correct_answer = display_order.index(0)
+
+            elif self.current_minigame == "Name To Structure":
+                extract_query = """
+                SELECT image_file, iupac from ochem_table
+                WHERE id in (?,?,?,?)"""
+
+                cursor.execute(extract_query, random_compounds)
+                compounds = cursor.fetchall()
+
+                if not compounds:
+                    print("No compounds found for Name To Structure")
+                    return False
+
+                self.correct_answer = 0
+
+                display_order = list(range(4))
+                rd.shuffle(display_order)
+                self.current_compounds = [compounds[i] for i in display_order]
+                self.correct_answer = display_order.index(0)
+
+            # Cache images
             self.cached_images = []
             for compound in self.current_compounds:
-                image_data = compound[3]
+                image_data = compound[3] if self.current_minigame == "Most Acidic" else compound[0]
                 if image_data:
                     pil_image = Image.open(BytesIO(image_data))
                     # Scale image
@@ -155,14 +185,17 @@ class Time_Trial:
                 else:
                     self.cached_images.append(None)
 
+            ochem_database.close()
+
             self.current_question_start = time.time()
             self.feedback_displayed = False
             self.selected_answer = None
 
+            return True
+
         except Exception as e:
-            print(f"Database error: {e}")
+            print(f"Database error in load_new_question: {e}")
             return False
-        return True
 
     def Most_Acidic(self, surface):
         """Display the Most Acidic minigame"""
@@ -184,6 +217,12 @@ class Time_Trial:
         score_rect = score_surface.get_rect(topright=(self.playground_rect.right - 20, self.playground_rect.y + 20))
         surface.blit(score_surface, score_rect)
 
+        if not self.button_rects or not self.current_compounds:
+            print("Button rects or compounds are not initialized!")
+            print("Button rects:", self.button_rects)
+            print("Current compounds:", self.current_compounds)
+            return
+
         # Draw compound options
         for i, (compound, button_rect) in enumerate(zip(self.current_compounds, self.button_rects)):
             # Draw button background
@@ -199,7 +238,7 @@ class Time_Trial:
 
             # Draw formula
             formula_font = pygame.font.SysFont('comicsansms', 14)
-            formula_text = compound[2]  # iupac
+            formula_text = self.truncate_text(compound[2]) # iupac
             formula_surface = formula_font.render(formula_text, True, (0, 0, 0))
             formula_rect = formula_surface.get_rect(
                 centerx=button_rect.centerx,
@@ -209,12 +248,68 @@ class Time_Trial:
 
         # Check if it's time for a new question
         current_time = time.time()
+        print(f"Current time: {current_time}, Feedback start: {self.feedback_start}, Duration: {self.feedback_duration}")
+
         if self.feedback_displayed and current_time - self.feedback_start >= self.feedback_duration:
+            print("Loading new question due to feedback duration")
             self.load_new_question()
         elif not self.feedback_displayed and current_time - self.current_question_start >= self.question_duration:
             # Time's up for this question
             self.selected_answer = -1  # Force incorrect
             self.handle_answer()
+    def Name_To_Structure(self, surface):
+
+        if not self.current_compounds:
+            print("No compounds available for Name to Structure")
+            return
+
+        try:
+            # Draw instructions
+            instructions_font = pygame.font.SysFont('comicsansms', 36)
+            instructions_text = "Match the following IUPAC name to its structure :"
+            instructions_surface = instructions_font.render(instructions_text, True, (0, 0, 0))
+            instructions_rect = instructions_surface.get_rect(
+                center=(self.playground_rect.centerx, self.playground_rect.y + 50))
+            surface.blit(instructions_surface, instructions_rect)
+
+            # Safely access the IUPAC name
+            compound_font = pygame.font.SysFont('comicsansms', 20)
+            compound_text = str(self.current_compounds[self.correct_answer][1])
+            compound_surface = compound_font.render(compound_text, True, (0, 0, 0))
+            compound_rect = compound_surface.get_rect(
+                center=(self.playground_rect.centerx, self.playground_rect.y + 75)
+            )
+            surface.blit(compound_surface, compound_rect)
+
+            # Draw score
+            score_text = f"Score: {self.score}"
+            score_surface = self.font.render(score_text, True, (0, 0, 0))
+            score_rect = score_surface.get_rect(topright=(self.playground_rect.right - 20, self.playground_rect.y + 20))
+            surface.blit(score_surface, score_rect)
+
+            # Draw compound options
+            for i, (compound, button_rect) in enumerate(zip(self.current_compounds, self.button_rects)):
+                # Draw button background
+                button_color = self.button_color
+                if self.feedback_displayed and i == self.selected_answer:
+                    button_color = (0, 255, 0) if i == self.correct_answer else (255, 0, 0)
+                pygame.draw.rect(surface, button_color, button_rect, border_radius=10)
+
+                # Draw image
+                if self.cached_images[i]:
+                    image_rect = self.cached_images[i].get_rect(center=button_rect.center)
+                    surface.blit(self.cached_images[i], image_rect)
+
+            # Check if it's time for a new question
+            current_time = time.time()
+            if self.feedback_displayed and current_time - self.feedback_start >= self.feedback_duration:
+                self.load_new_question()
+            elif not self.feedback_displayed and current_time - self.current_question_start >= self.question_duration:
+                # Time's up for this question
+                self.selected_answer = -1  # Force incorrect
+                self.handle_answer()
+        except Exception as e:
+            print(f"Error in Name_To_Structure: {e}")
 
     def on_event(self, event):
         if event.type == pygame.QUIT:
@@ -229,11 +324,13 @@ class Time_Trial:
         """Process the selected answer and update game state"""
         if self.selected_answer == self.correct_answer:
             self.score += 1
+
         self.feedback_displayed = True
         self.feedback_start = time.time()
 
     def handle_click(self, pos):
         """Handle mouse clicks for answer selection"""
+        # Prevent multiple clicks during feedback or if compounds not loaded
         if not self.current_compounds or self.feedback_displayed:
             return
 
@@ -274,14 +371,30 @@ class Time_Trial:
             self.start_timer()
 
         self.time_left = self.update_timer()
+
         if self.time_left > 0:
             self.draw_timer(surface)
 
-            # Run current minigame
-            current_game_index = self.time_limit - self.time_left
-            game_type = self.Minigame_list[current_game_index % len(self.Minigame_list)]
-            if self.Minigame_dictionary[game_type] == "Most Acidic":
+            # If no current question or previous question was answered, load a new question
+            if not self.current_compounds or self.question_answered:
+                # Select current minigame
+                current_game_type = self.Minigame_list[self.current_minigame_index]
+                self.current_minigame = self.Minigame_dictionary[current_game_type]
+
+                # Load new question
+                if self.load_new_question():
+                    self.question_answered = False
+                    self.current_minigame_index = (self.current_minigame_index + 1) % len(self.Minigame_list)
+                else:
+                    print("Failed to load new question")
+                    return
+
+            # Run the selected minigame
+            if self.current_minigame == "Most Acidic":
                 self.Most_Acidic(surface)
+            elif self.current_minigame == "Name To Structure":
+                self.Name_To_Structure(surface)
+
         else:
             self.draw_game_over(surface)
 
@@ -295,6 +408,3 @@ class Time_Trial:
                 self.toggle_background()
             else:
                 self.handle_click(event.pos)
-
-
-# The rest of your methods (start_timer, update_timer, draw_timer, etc.) remain the same

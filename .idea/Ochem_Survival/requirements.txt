@@ -1,4 +1,5 @@
 pygame
 rdkit
 pillow
-sqlite3
+openpyxl
+pandas
