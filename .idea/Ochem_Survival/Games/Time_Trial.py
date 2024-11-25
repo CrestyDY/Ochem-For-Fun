@@ -40,7 +40,7 @@ class Time_Trial:
         self.question_duration = 60  # Time per question in seconds
         self.feedback_displayed = False
         self.feedback_start = None
-        self.feedback_duration = 2
+        self.feedback_duration = 0.5
 
         # Minigames
         self.current_minigame = None
@@ -52,6 +52,7 @@ class Time_Trial:
         self.button_height = 300
         self.button_margin = 50
         self.button_rects = []
+        self.button_color = (200,200,200)
         self.setup_button_rects()
 
         self.cached_images = []
@@ -86,8 +87,8 @@ class Time_Trial:
 
     def setup_button_rects(self):
         """Create rectangles for the four answer buttons in a 2x2 grid"""
-        start_x = self.playground_rect.x + 100
-        start_y = self.playground_rect.y + 200
+        start_x = self.playground_rect.x + 350
+        start_y = self.playground_rect.y + 100
 
         self.button_rects = [
             pygame.Rect(start_x, start_y, self.button_width, self.button_height),
@@ -186,7 +187,7 @@ class Time_Trial:
         # Draw compound options
         for i, (compound, button_rect) in enumerate(zip(self.current_compounds, self.button_rects)):
             # Draw button background
-            button_color = (200, 200, 200)
+            button_color = self.button_color
             if self.feedback_displayed and i == self.selected_answer:
                 button_color = (0, 255, 0) if i == self.correct_answer else (255, 0, 0)
             pygame.draw.rect(surface, button_color, button_rect, border_radius=10)
@@ -197,8 +198,8 @@ class Time_Trial:
                 surface.blit(self.cached_images[i], image_rect)
 
             # Draw formula
-            formula_font = pygame.font.SysFont('comicsansms', 20)
-            formula_text = compound[1]  # chemical_formula
+            formula_font = pygame.font.SysFont('comicsansms', 14)
+            formula_text = compound[2]  # iupac
             formula_surface = formula_font.render(formula_text, True, (0, 0, 0))
             formula_rect = formula_surface.get_rect(
                 centerx=button_rect.centerx,
@@ -255,6 +256,19 @@ class Time_Trial:
                          playground_surface.get_rect(), border_radius=50)
         surface.blit(playground_surface, self.playground_rect)
 
+        # Draw the button with smooth corners (rounded rectangle)
+        button_color = (169, 169, 169) if self.dark_mode else (230, 230, 230)
+        pygame.draw.rect(surface, button_color, self.button_rect, border_radius=10)  # Rounded corners
+
+        button_text = "Light" if self.dark_mode else "Lighter"
+        text_color = (255, 255, 255) if self.dark_mode else (0, 0, 0)
+
+        # Render the button text in white and position it in the center of the button
+        button_font = pygame.font.Font('freesansbold.ttf', 20)
+        button_text_surface = button_font.render(button_text, True, text_color)
+        button_text_rect = button_text_surface.get_rect(center=self.button_rect.center)
+        surface.blit(button_text_surface, button_text_rect)
+
         # Update and draw timer
         if self.start_time is None:
             self.start_timer()
@@ -276,10 +290,11 @@ class Time_Trial:
     def on_event(self, event):
         if event.type == pygame.QUIT:
             self._running = False
-        elif event.type == pygame.MOUSEBUTTONDOWN:
+        if event.type == pygame.MOUSEBUTTONDOWN:
             if self.button_rect.collidepoint(event.pos):
                 self.toggle_background()
             else:
                 self.handle_click(event.pos)
+
 
 # The rest of your methods (start_timer, update_timer, draw_timer, etc.) remain the same
