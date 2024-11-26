@@ -4,46 +4,101 @@ from pygame.locals import *
 import HexagonButton
 from Time_Trial import Time_Trial  # Import the Time_Trial class
 import sys
-sys.path.insert(1, '/Ochem_Survival/Games')
 
 
 
 class App:
     def __init__(self):
+        # Get desktop sizes and choose the first (primary) display
+        pygame.init()
+        desktop_sizes = pygame.display.get_desktop_sizes()
+        self.max_width, self.max_height = desktop_sizes[0]
+
+        # Scale window to 90% of screen size while maintaining original aspect ratio
+        scale_factor = min(self.max_width / 1600, self.max_height / 1000)
+        self.width = int(1600 * scale_factor * 0.9)
+        self.height = int(1000 * scale_factor * 0.9)
+        self.size = (self.width, self.height)
+
         self._running = True
         self._display_surf = None
-        self.size = self.weight, self.height = 1600, 1000
         self.current_screen = "playground"
 
         # Background images
         self.background_light = background.Background('images/background.jpg', [0, 0])
         self.background_dark = background.Background('images/background-dark-mode.jpg', [0, 0])
-        self.current_background = self.background_dark
+        self.current_background = self.background_light
         self.dark_mode = True
-        self.button_rect = pygame.Rect(1500, 0, 100, 50)
 
-        #Text
-        self.base_title_font_size = 50
-        self.base_subtitle_font_size = 30
-        self.base_subsubtitle_font_size = 30
-        self.base_title_offset = (275, 5)
-        self.base_subtitle_offset = (375, 75)
-        self.base_subsubtitle_offset = (525, 125)
+        # Dynamically position button
+        self.button_rect = pygame.Rect(self.width - 100, 0, 100, 50)
 
-        # Playground
-        self.playground_rect = pygame.Rect(120, 75, 1360, 850)
-        self.gamemode = ""
-        self.gamemode1 = HexagonButton.HexButton(550, 500, 120, (150, 150, 150), (245, 245, 220), "SURVIVAL")
-        self.gamemode2 = HexagonButton.HexButton(1050, 500, 120, (150, 150, 150), (245, 245, 220), "TIME TRIAL")
+        # Playground scaling with centering
+        playground_width = int(1200 * scale_factor)
+        playground_height = int(800 * scale_factor)
 
-        #Gamemodes
+        # Calculate left and top margins to center the playground
+        playground_left = (self.width - playground_width) // 2
+        playground_top = (self.height - playground_height) // 2
+
+        self.playground_rect = pygame.Rect(
+            playground_left,
+            playground_top,
+            playground_width,
+            playground_height
+        )
+
+        # Text scaling with scaled offsets relative to playground
+        self.base_title_font_size = int(50 * scale_factor)
+        self.base_subtitle_font_size = int(30 * scale_factor)
+        self.base_subsubtitle_font_size = int(30 * scale_factor)
+
+        # Scaled offsets relative to playground
+        self.base_title_offset = (
+            int(275 * scale_factor),
+            int(5 * scale_factor)
+        )
+        self.base_subtitle_offset = (
+            int(375 * scale_factor),
+            int(75 * scale_factor)
+        )
+        self.base_subsubtitle_offset = (
+            int(525 * scale_factor),
+            int(125 * scale_factor)
+        )
+
+        # Gamemode buttons scaling with centering
+        button_radius = int(120 * scale_factor)
+
+        # Position gamemode buttons relative to playground
+        self.gamemode1 = HexagonButton.HexButton(
+            playground_left + int(((playground_width+240) * 0.3) - button_radius),
+            playground_top + int(playground_height * 0.5),
+            button_radius,
+            (169, 169, 169),
+            (245, 245, 220),
+            "SURVIVAL"
+        )
+        self.gamemode2 = HexagonButton.HexButton(
+            playground_left + int(((playground_width+240) * 0.7) - button_radius),
+            playground_top + int(playground_height * 0.5),
+            button_radius,
+            (169, 169, 169),
+            (245, 245, 220),
+            "TIME TRIAL"
+        )
+
         self.time_trial = None
 
     def on_init(self):
         pygame.init()
         pygame.font.init()
 
-        # Display
+        pygame.mixer_music.load("Ochem_Music.mp3")
+        pygame.mixer_music.set_volume(0.5)
+        pygame.mixer_music.play(-1)
+
+        # Use dynamic sizing
         self._display_surf = pygame.display.set_mode(self.size, pygame.HWSURFACE | pygame.DOUBLEBUF | pygame.RESIZABLE)
 
         # Title and Icon
@@ -118,6 +173,7 @@ class App:
             self.time_trial.update_timer()
 
     def on_render(self):
+
         if self.current_screen == "playground":
             # Set the background
             self._display_surf.blit(self.current_background.image, self.current_background.rect)
@@ -137,7 +193,7 @@ class App:
 
             # Set the transparent playground surface with rounded corners
             playground_surface = pygame.Surface((self.playground_rect.width, self.playground_rect.height), pygame.SRCALPHA)
-            playground_color = (150, 150, 150, 180) if self.current_background == self.background_dark else (169, 169, 169, 180)
+            playground_color = (150, 150, 150, 180) if self.current_background == self.background_dark else (180, 180, 180, 150)
             pygame.draw.rect(playground_surface, playground_color, playground_surface.get_rect(), border_radius=50)
             self._display_surf.blit(playground_surface, self.playground_rect)
 
@@ -147,7 +203,7 @@ class App:
             # Title text
             title_font = pygame.font.SysFont('comicsansms', int(self.base_title_font_size * height_scale))
             title_text = "WELCOME TO OCHEM SURVIVAL !"
-            title_surface = title_font.render(title_text, True, (0, 0, 0))
+            title_surface = title_font.render(title_text, True, (0, 0, 0) if self.current_background == self.background_dark else (255,255,255))
             title_position = (
                 int(self.playground_rect.x + self.base_title_offset[0] * width_scale),
                 int(self.playground_rect.y + self.base_title_offset[1] * height_scale)
@@ -157,7 +213,7 @@ class App:
             # Subtitle text
             subtitle_font = pygame.font.SysFont('comicsansms', int(self.base_subtitle_font_size * height_scale))
             subtitle_text = "Are You Ready To Take On This Challenge ?"
-            subtitle_surface = subtitle_font.render(subtitle_text, True, (0, 0, 0))
+            subtitle_surface = subtitle_font.render(subtitle_text, True, (0, 0, 0) if self.current_background == self.background_dark else (255,255,255))
             subtitle_position = (
                 int(self.playground_rect.x + self.base_subtitle_offset[0] * width_scale),
                 int(self.playground_rect.y + self.base_subtitle_offset[1] * height_scale)
@@ -167,7 +223,7 @@ class App:
             # Sub-subtitle text
             subsubtitle_font = pygame.font.SysFont('comicsansms', int(self.base_subsubtitle_font_size * height_scale))
             subsubtitle_text = "Select a Gamemode"
-            subsubtitle_surface = subsubtitle_font.render(subsubtitle_text, True, (0, 0, 0))
+            subsubtitle_surface = subsubtitle_font.render(subsubtitle_text, True, (0, 0, 0) if self.current_background == self.background_dark else (255,255,255))
             subsubtitle_position = (
                 int(self.playground_rect.x + self.base_subsubtitle_offset[0] * width_scale),
                 int(self.playground_rect.y + self.base_subsubtitle_offset[1] * height_scale)

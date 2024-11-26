@@ -43,10 +43,10 @@ class Time_Trial:
         self.feedback_duration = 0.5
 
         # Minigames
-        self.current_minigame = None
         self.Minigame_list = rd.choices([1, 2], k=100)  # Random selection of minigames
         self.Minigame_dictionary = {1: "Most Acidic", 2: "Name To Structure"}
         self.current_minigame_index = 0
+        self.current_minigame = self.Minigame_dictionary[self.Minigame_list[self.current_minigame_index]]
         self.question_answered = False
 
         # Button dimensions for answers
@@ -78,6 +78,7 @@ class Time_Trial:
         text_surface = self.font.render(game_over_text, True, (255, 0, 0))
         text_rect = text_surface.get_rect(center=(surface.get_width() // 2, surface.get_height() // 2))
         surface.blit(text_surface, text_rect)
+
 
     def toggle_background(self):
         "Toggle between light and dark backgrounds."
@@ -201,6 +202,7 @@ class Time_Trial:
         """Display the Most Acidic minigame"""
         if not self.current_compounds:
             if not self.load_new_question():
+                print("No Compounds")
                 return
 
         # Draw instructions
@@ -248,7 +250,6 @@ class Time_Trial:
 
         # Check if it's time for a new question
         current_time = time.time()
-        print(f"Current time: {current_time}, Feedback start: {self.feedback_start}, Duration: {self.feedback_duration}")
 
         if self.feedback_displayed and current_time - self.feedback_start >= self.feedback_duration:
             print("Loading new question due to feedback duration")
@@ -334,6 +335,8 @@ class Time_Trial:
         if not self.current_compounds or self.feedback_displayed:
             return
 
+        print(self.current_minigame)
+        print(self.current_minigame_index)
         for i, rect in enumerate(self.button_rects):
             if rect.collidepoint(pos):
                 self.selected_answer = i
@@ -345,9 +348,7 @@ class Time_Trial:
         surface.blit(self.current_background.image, self.current_background.rect)
 
         playground_surface = pygame.Surface(
-            (self.playground_rect.width, self.playground_rect.height),
-            pygame.SRCALPHA
-        )
+            (self.playground_rect.width, self.playground_rect.height), pygame.SRCALPHA)
         playground_color = (150, 150, 150, 180) if self.dark_mode else (169, 169, 169, 180)
         pygame.draw.rect(playground_surface, playground_color,
                          playground_surface.get_rect(), border_radius=50)
@@ -375,20 +376,27 @@ class Time_Trial:
         if self.time_left > 0:
             self.draw_timer(surface)
 
+            # Cycle to next minigame type BEFORE loading question
+            current_game_type = self.Minigame_list[self.current_minigame_index]
+            self.current_minigame = self.Minigame_dictionary[current_game_type]
+
             # If no current question or previous question was answered, load a new question
             if not self.current_compounds or self.question_answered:
-                # Select current minigame
+                # Increment minigame index BEFORE loading question
+                self.current_minigame_index = (self.current_minigame_index + 1) % len(self.Minigame_list)
+
+
+
+                # Reload current minigame type after incrementing
                 current_game_type = self.Minigame_list[self.current_minigame_index]
                 self.current_minigame = self.Minigame_dictionary[current_game_type]
 
                 # Load new question
                 if self.load_new_question():
                     self.question_answered = False
-                    self.current_minigame_index = (self.current_minigame_index + 1) % len(self.Minigame_list)
                 else:
                     print("Failed to load new question")
                     return
-
             # Run the selected minigame
             if self.current_minigame == "Most Acidic":
                 self.Most_Acidic(surface)
@@ -408,3 +416,4 @@ class Time_Trial:
                 self.toggle_background()
             else:
                 self.handle_click(event.pos)
+
