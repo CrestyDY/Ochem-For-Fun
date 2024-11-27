@@ -28,7 +28,7 @@ class App:
         self.background_light = background.Background('images/background.jpg', [0, 0])
         self.background_dark = background.Background('images/background-dark-mode.jpg', [0, 0])
         self.current_background = self.background_light
-        self.dark_mode = True
+        self.dark_mode = False
 
         # Dynamically position button
         self.button_rect = pygame.Rect(self.width - 100, 0, 100, 50)
@@ -189,7 +189,7 @@ class App:
             button_color = (169, 169, 169) if self.dark_mode else (230, 230, 230)
             pygame.draw.rect(self._display_surf, button_color, self.button_rect, border_radius=10)  # Rounded corners
 
-            button_text = "Light" if self.dark_mode else "Lighter"
+            button_text = "Lighter" if not self.dark_mode else "Light"
             text_color = (255, 255, 255) if self.dark_mode else (0, 0, 0)
 
             # Render the button text in white and position it in the center of the button
