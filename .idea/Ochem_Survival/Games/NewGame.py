@@ -146,6 +146,13 @@ class App:
                     self.time_trial = Time_Trial()
                     self.time_trial.start_timer()
 
+            # Handle return to menu from time trial
+            if self.current_screen == "time_trial" and self.time_trial and self.time_trial.time_left <= 0:
+                if self.time_trial.game_over_button_rect.collidepoint(event.pos):
+                    # Return to playground screen
+                    self.current_screen = "playground"
+                    self.time_trial = None
+
         # Handle mouse motion for hover effect in playground screen
         if event.type == pygame.MOUSEMOTION and self.current_screen == "playground":
             self.gamemode1.check_hover(event.pos)

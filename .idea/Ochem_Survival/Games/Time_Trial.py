@@ -26,7 +26,7 @@ class Time_Trial:
         self.background_dark = background.Background('images/background-dark-mode.jpg', [0, 0])
         self.current_background = self.background_dark
         self.dark_mode = True
-        self.button_rect = pygame.Rect(1500, 0, 100, 50)
+        self.button_rect = pygame.Rect(1460, 0, 100, 50)
 
         # Playground
         self.playground_rect = pygame.Rect(120, 75, 1360, 850)
@@ -43,10 +43,8 @@ class Time_Trial:
         self.feedback_duration = 0.5
 
         # Minigames
-        self.Minigame_list = rd.choices([1, 2], k=100)  # Random selection of minigames
         self.Minigame_dictionary = {1: "Most Acidic", 2: "Name To Structure"}
-        self.current_minigame_index = 0
-        self.current_minigame = self.Minigame_dictionary[self.Minigame_list[self.current_minigame_index]]
+        self.current_minigame = None
         self.question_answered = False
 
         # Button dimensions for answers
@@ -58,6 +56,25 @@ class Time_Trial:
         self.setup_button_rects()
 
         self.cached_images = []
+
+        #Hover effect
+        self.button_hover_states = [False, False, False, False]
+        self.game_over_button_hover = False
+
+        # Game over button
+        self.game_over_button_rect = pygame.Rect(
+            self.playground_rect.centerx - 150,
+            self.playground_rect.centery + 100,
+            300,
+            50
+        )
+        self.return_to_menu = False
+
+    def select_random_minigame(self):
+        """Randomly select a minigame type"""
+        game_type = rd.randint(1, 2)
+        self.current_minigame = self.Minigame_dictionary[game_type]
+        print(f"Selected minigame: {self.current_minigame}")
     def start_timer(self):
         self.start_time = time.time()
 
@@ -76,9 +93,23 @@ class Time_Trial:
     def draw_game_over(self, surface):
         game_over_text = "Time's Up! Game Over!"
         text_surface = self.font.render(game_over_text, True, (255, 0, 0))
-        text_rect = text_surface.get_rect(center=(surface.get_width() // 2, surface.get_height() // 2))
+        text_rect = text_surface.get_rect(center=(surface.get_width() // 2, surface.get_height() // 2 - 50))
         surface.blit(text_surface, text_rect)
 
+        # Display final score
+        score_text = f"Final Score: {self.score}"
+        score_surface = self.font.render(score_text, True, (0, 0, 0))
+        score_rect = score_surface.get_rect(center=(surface.get_width() // 2, surface.get_height() // 2))
+        surface.blit(score_surface, score_rect)
+
+        # Draw Return to Menu button with hover effect
+        button_color = (140, 140, 140) if self.game_over_button_hover else (200, 200, 200)
+        pygame.draw.rect(surface, button_color, self.game_over_button_rect, border_radius=10)
+        button_font = pygame.font.SysFont('comicsansms', 24)
+        button_text = "Return to Menu"
+        button_text_surface = button_font.render(button_text, True, (0, 0, 0))
+        button_text_rect = button_text_surface.get_rect(center=self.game_over_button_rect.center)
+        surface.blit(button_text_surface, button_text_rect)
 
     def toggle_background(self):
         "Toggle between light and dark backgrounds."
@@ -109,6 +140,19 @@ class Time_Trial:
                         start_y + self.button_height + self.button_margin,
                         self.button_width, self.button_height)
         ]
+
+    def check_hover(self, mouse_pos):
+        # Check hover for game option buttons
+        if self.time_left > 0:
+            for i, rect in enumerate(self.button_rects):
+                if rect.collidepoint(mouse_pos):
+                    self.button_hover_states[i] = True
+                else:
+                    self.button_hover_states[i] = False
+
+        # Check hover for game over button
+        if self.time_left <= 0:
+            self.game_over_button_hover = self.game_over_button_rect.collidepoint(mouse_pos)
 
     def load_new_question(self):
         try:
@@ -228,7 +272,7 @@ class Time_Trial:
         # Draw compound options
         for i, (compound, button_rect) in enumerate(zip(self.current_compounds, self.button_rects)):
             # Draw button background
-            button_color = self.button_color
+            button_color = (140, 140, 140) if self.button_hover_states[i] else self.button_color
             if self.feedback_displayed and i == self.selected_answer:
                 button_color = (0, 255, 0) if i == self.correct_answer else (255, 0, 0)
             pygame.draw.rect(surface, button_color, button_rect, border_radius=10)
@@ -253,6 +297,7 @@ class Time_Trial:
 
         if self.feedback_displayed and current_time - self.feedback_start >= self.feedback_duration:
             print("Loading new question due to feedback duration")
+            self.select_random_minigame()
             self.load_new_question()
         elif not self.feedback_displayed and current_time - self.current_question_start >= self.question_duration:
             # Time's up for this question
@@ -264,53 +309,51 @@ class Time_Trial:
             print("No compounds available for Name to Structure")
             return
 
-        try:
-            # Draw instructions
-            instructions_font = pygame.font.SysFont('comicsansms', 36)
-            instructions_text = "Match the following IUPAC name to its structure :"
-            instructions_surface = instructions_font.render(instructions_text, True, (0, 0, 0))
-            instructions_rect = instructions_surface.get_rect(
-                center=(self.playground_rect.centerx, self.playground_rect.y + 50))
-            surface.blit(instructions_surface, instructions_rect)
+        # Draw instructions
+        instructions_font = pygame.font.SysFont('comicsansms', 36)
+        instructions_text = "Match the following IUPAC name to its structure :"
+        instructions_surface = instructions_font.render(instructions_text, True, (0, 0, 0))
+        instructions_rect = instructions_surface.get_rect(
+            center=(self.playground_rect.centerx, self.playground_rect.y + 50))
+        surface.blit(instructions_surface, instructions_rect)
 
-            # Safely access the IUPAC name
-            compound_font = pygame.font.SysFont('comicsansms', 20)
-            compound_text = str(self.current_compounds[self.correct_answer][1])
-            compound_surface = compound_font.render(compound_text, True, (0, 0, 0))
-            compound_rect = compound_surface.get_rect(
-                center=(self.playground_rect.centerx, self.playground_rect.y + 75)
-            )
-            surface.blit(compound_surface, compound_rect)
+        # Safely access the IUPAC name
+        compound_font = pygame.font.SysFont('comicsansms', 20)
+        compound_text = str(self.current_compounds[self.correct_answer][1])
+        compound_surface = compound_font.render(compound_text, True, (0, 0, 0))
+        compound_rect = compound_surface.get_rect(
+            center=(self.playground_rect.centerx, self.playground_rect.y + 75)
+        )
+        surface.blit(compound_surface, compound_rect)
 
-            # Draw score
-            score_text = f"Score: {self.score}"
-            score_surface = self.font.render(score_text, True, (0, 0, 0))
-            score_rect = score_surface.get_rect(topright=(self.playground_rect.right - 20, self.playground_rect.y + 20))
-            surface.blit(score_surface, score_rect)
+        # Draw score
+        score_text = f"Score: {self.score}"
+        score_surface = self.font.render(score_text, True, (0, 0, 0))
+        score_rect = score_surface.get_rect(topright=(self.playground_rect.right - 20, self.playground_rect.y + 20))
+        surface.blit(score_surface, score_rect)
 
-            # Draw compound options
-            for i, (compound, button_rect) in enumerate(zip(self.current_compounds, self.button_rects)):
-                # Draw button background
-                button_color = self.button_color
-                if self.feedback_displayed and i == self.selected_answer:
-                    button_color = (0, 255, 0) if i == self.correct_answer else (255, 0, 0)
-                pygame.draw.rect(surface, button_color, button_rect, border_radius=10)
+        # Draw compound options
+        for i, (compound, button_rect) in enumerate(zip(self.current_compounds, self.button_rects)):
+            # Draw button background
+            button_color = (140, 140, 140) if self.button_hover_states[i] else self.button_color
+            if self.feedback_displayed and i == self.selected_answer:
+                button_color = (0, 255, 0) if i == self.correct_answer else (255, 0, 0)
+            pygame.draw.rect(surface, button_color, button_rect, border_radius=10)
 
-                # Draw image
-                if self.cached_images[i]:
-                    image_rect = self.cached_images[i].get_rect(center=button_rect.center)
-                    surface.blit(self.cached_images[i], image_rect)
+            # Draw image
+            if self.cached_images[i]:
+                image_rect = self.cached_images[i].get_rect(center=button_rect.center)
+                surface.blit(self.cached_images[i], image_rect)
 
-            # Check if it's time for a new question
-            current_time = time.time()
-            if self.feedback_displayed and current_time - self.feedback_start >= self.feedback_duration:
-                self.load_new_question()
-            elif not self.feedback_displayed and current_time - self.current_question_start >= self.question_duration:
-                # Time's up for this question
-                self.selected_answer = -1  # Force incorrect
-                self.handle_answer()
-        except Exception as e:
-            print(f"Error in Name_To_Structure: {e}")
+        # Check if it's time for a new question
+        current_time = time.time()
+        if self.feedback_displayed and current_time - self.feedback_start >= self.feedback_duration:
+            self.select_random_minigame()
+            self.load_new_question()
+        elif not self.feedback_displayed and current_time - self.current_question_start >= self.question_duration:
+            # Time's up for this question
+            self.selected_answer = -1  # Force incorrect
+            self.handle_answer()
 
     def on_event(self, event):
         if event.type == pygame.QUIT:
@@ -326,6 +369,7 @@ class Time_Trial:
         if self.selected_answer == self.correct_answer:
             self.score += 1
 
+
         self.feedback_displayed = True
         self.feedback_start = time.time()
 
@@ -334,9 +378,6 @@ class Time_Trial:
         # Prevent multiple clicks during feedback or if compounds not loaded
         if not self.current_compounds or self.feedback_displayed:
             return
-
-        print(self.current_minigame)
-        print(self.current_minigame_index)
         for i, rect in enumerate(self.button_rects):
             if rect.collidepoint(pos):
                 self.selected_answer = i
@@ -376,20 +417,11 @@ class Time_Trial:
         if self.time_left > 0:
             self.draw_timer(surface)
 
-            # Cycle to next minigame type BEFORE loading question
-            current_game_type = self.Minigame_list[self.current_minigame_index]
-            self.current_minigame = self.Minigame_dictionary[current_game_type]
-
             # If no current question or previous question was answered, load a new question
             if not self.current_compounds or self.question_answered:
-                # Increment minigame index BEFORE loading question
-                self.current_minigame_index = (self.current_minigame_index + 1) % len(self.Minigame_list)
-
-
-
-                # Reload current minigame type after incrementing
-                current_game_type = self.Minigame_list[self.current_minigame_index]
-                self.current_minigame = self.Minigame_dictionary[current_game_type]
+                # Randomly select a new minigame type
+                self.select_random_minigame()
+                self.load_new_question()
 
                 # Load new question
                 if self.load_new_question():
@@ -397,6 +429,7 @@ class Time_Trial:
                 else:
                     print("Failed to load new question")
                     return
+
             # Run the selected minigame
             if self.current_minigame == "Most Acidic":
                 self.Most_Acidic(surface)
@@ -411,9 +444,16 @@ class Time_Trial:
     def on_event(self, event):
         if event.type == pygame.QUIT:
             self._running = False
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if self.button_rect.collidepoint(event.pos):
+        elif event.type == pygame.MOUSEMOTION:
+            # Check hover states for buttons
+            self.check_hover(event.pos)
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if self.time_left <= 0 and self.game_over_button_rect.collidepoint(event.pos):
+                # Return to menu button clicked
+                self.return_to_menu = True
+                self._running = False
+            elif self.button_rect.collidepoint(event.pos):
                 self.toggle_background()
-            else:
+            elif self.time_left > 0:  # Only handle clicks if the game is still running
                 self.handle_click(event.pos)
 
