@@ -100,7 +100,8 @@ class App:
         pygame.init()
         pygame.font.init()
 
-        pygame.mixer_music.load("Ochem_Music.mp3")
+        music_path = os.path.join(self.base_path, 'Ochem_Music.mp3')
+        pygame.mixer_music.load(music_path)
         pygame.mixer_music.set_volume(0.5)
         pygame.mixer_music.play(-1)
 
