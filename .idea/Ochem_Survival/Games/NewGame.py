@@ -4,11 +4,13 @@ from pygame.locals import *
 import HexagonButton
 from Time_Trial import Time_Trial  # Import the Time_Trial class
 import sys
+import os
 
 
 
 class App:
     def __init__(self):
+
         # Get desktop sizes and choose the first (primary) display
         pygame.init()
         desktop_sizes = pygame.display.get_desktop_sizes()
@@ -25,8 +27,9 @@ class App:
         self.current_screen = "playground"
 
         # Background images
-        self.background_light = background.Background('images/background.jpg', [0, 0])
-        self.background_dark = background.Background('images/background-dark-mode.jpg', [0, 0])
+        self.base_path = os.path.dirname(os.path.abspath(__file__))
+        self.background_light = background.Background(self.get_image_path('background.jpg'), [0, 0])
+        self.background_dark = background.Background(self.get_image_path('background-dark-mode.jpg'), [0, 0])
         self.current_background = self.background_light
         self.dark_mode = False
 
@@ -90,6 +93,9 @@ class App:
 
         self.time_trial = None
 
+    def get_image_path(self, filename):
+        return os.path.join(self.base_path, 'images', filename)
+
     def on_init(self):
         pygame.init()
         pygame.font.init()
@@ -102,8 +108,8 @@ class App:
         self._display_surf = pygame.display.set_mode(self.size, pygame.HWSURFACE | pygame.DOUBLEBUF | pygame.RESIZABLE)
 
         # Title and Icon
-        pygame.display.set_caption('Ochem Battle')
-        Icon = pygame.image.load('images/background.png')
+        pygame.display.set_caption('Ochem Survival')
+        Icon = pygame.image.load(self.get_image_path("background.png"))
         pygame.display.set_icon(Icon)
 
         pygame.display.flip()

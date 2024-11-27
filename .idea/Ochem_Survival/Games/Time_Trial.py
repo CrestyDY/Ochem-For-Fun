@@ -3,6 +3,7 @@ import time
 import background
 import sqlite3 as sql
 import random as rd
+import os
 from PIL import Image
 from io import BytesIO
 
@@ -22,11 +23,12 @@ class Time_Trial:
         self.font = pygame.font.SysFont('comicsansms', 36)
 
         # Background setup
-        self.background_light = background.Background('images/background.jpg', [0, 0])
-        self.background_dark = background.Background('images/background-dark-mode.jpg', [0, 0])
-        self.current_background = self.background_dark
-        self.dark_mode = True
-        self.button_rect = pygame.Rect(1460, 0, 100, 50)
+        self.base_path = os.path.dirname(os.path.abspath(__file__))
+        self.background_light = background.Background(self.get_image_path('background.jpg'),[0,0])
+        self.background_dark = background.Background(self.get_image_path('background-dark-mode.jpg'),[0,0])
+        self.current_background = self.background_light
+        self.dark_mode = False
+        self.button_rect = pygame.Rect(1455, 0, 100, 50)
 
         # Playground
         self.playground_rect = pygame.Rect(120, 75, 1360, 850)
@@ -69,6 +71,9 @@ class Time_Trial:
             50
         )
         self.return_to_menu = False
+
+    def get_image_path(self, filename):
+        return os.path.join(self.base_path, 'images', filename)
 
     def select_random_minigame(self):
         """Randomly select a minigame type"""

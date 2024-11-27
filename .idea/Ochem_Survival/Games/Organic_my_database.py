@@ -1,8 +1,17 @@
+import os
 import openpyxl
 import pandas as pd
 
-dataframe = openpyxl.load_workbook("ochem.xlsx")
+# Get the base path of the script
+base_path = os.path.dirname(os.path.abspath(__file__))
 
+# Create the full path to the Excel file
+excel_file_path = os.path.join(base_path, "ochem.xlsx")
+
+# Load the workbook using the full path
+dataframe = openpyxl.load_workbook(excel_file_path)
+
+# Rest of your existing code remains the same
 # Define variable to read sheet
 dataframe1 = dataframe.active
 
