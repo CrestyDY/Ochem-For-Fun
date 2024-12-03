@@ -1,14 +1,71 @@
 import pygame
 import background
 from pygame.locals import *
-import HexagonButton
-from Time_Trial import Time_Trial  # Import the Time_Trial class
+from Time_Trial import Time_Trial
+import math
 import sys
 import os
 
-
-
 class App:
+    class HexButton:
+        def __init__(self, x, y, base_size, scale_factor, color, hover_color, text, text_color=(0, 0, 0)):
+            # Scale the size based on the window scaling factor
+            self.base_size = base_size
+            self.size = int(base_size * scale_factor)
+
+            # Dynamically position the button based on scaling
+            self.x = x
+            self.y = y
+
+            self.color = color
+            self.hover_color = hover_color
+            self.text = text
+            self.text_color = text_color
+            self.is_hovered = False  # Track if the mouse is over the button
+            self.points = []  # Store hexagon points
+
+        def calculate_hex_points(self, size_adjustment=0):
+            # Calculates the six points of a hexagon with an optional size adjustment for border
+            points = []
+            for i in range(6):
+                angle_deg = 60 * i
+                angle_rad = math.radians(angle_deg + 30)
+                x = self.x + (self.size + size_adjustment) * math.cos(angle_rad)
+                y = self.y + (self.size + size_adjustment) * math.sin(angle_rad)
+                points.append((x, y))
+            return points
+
+        def draw(self, surface):
+            # Change color if hovered
+            hex_color = self.hover_color if self.is_hovered else self.color
+
+            # Calculate points each time to keep positions consistent with possible changes
+            self.points = self.calculate_hex_points()
+
+            # Draw border hexagon
+            border_points = self.calculate_hex_points(size_adjustment=5)  # Adjust size for the border
+            pygame.draw.polygon(surface, (0, 0, 0), border_points)  # Black border color
+
+            # Draw main hexagon with hover effect
+            pygame.draw.polygon(surface, hex_color, self.points)
+
+            # Dynamically scale font size based on hexagon size
+            font_size = max(int(self.size / 4), 12)  # Ensure minimum font size
+            font = pygame.font.SysFont('comicsansms', font_size)
+            text_surface = font.render(self.text, True, self.text_color)
+            text_rect = text_surface.get_rect(center=(self.x, self.y))
+            surface.blit(text_surface, text_rect)
+
+        def is_clicked(self, pos):
+            # Check if the mouse position is within the hexagon
+            poly_surface = pygame.Surface((self.size * 2, self.size * 2), pygame.SRCALPHA)
+            pygame.draw.polygon(poly_surface, (255, 255, 255, 255), self.points)
+            return poly_surface.get_rect(topleft=(self.x - self.size, self.y - self.size)).collidepoint(pos)
+
+        def check_hover(self, mouse_pos):
+            # Check if mouse is over the hexagon
+            self.is_hovered = pygame.Rect(self.x - self.size, self.y - self.size, self.size * 2,
+                                          self.size * 2).collidepoint(mouse_pos)
     def __init__(self):
 
         # Get desktop sizes and choose the first (primary) display
@@ -72,26 +129,33 @@ class App:
 
         # Gamemode buttons scaling with centering
         button_radius = int(120 * scale_factor)
+        # Base size for hexagon buttons
+        base_button_radius = 120
 
         # Position gamemode buttons relative to playground
-        self.gamemode1 = HexagonButton.HexButton(
-            playground_left + int(((playground_width+240) * 0.3) - button_radius),
+        self.gamemode1 = self.HexButton(
+            playground_left + int(((playground_width + 240) * 0.3) - base_button_radius),
             playground_top + int(playground_height * 0.5),
-            button_radius,
+            base_button_radius,  # Base size
+            scale_factor,  # Scaling factor
             (169, 169, 169),
             (245, 245, 220),
             "SURVIVAL"
         )
-        self.gamemode2 = HexagonButton.HexButton(
-            playground_left + int(((playground_width+240) * 0.7) - button_radius),
+        self.gamemode2 = self.HexButton(
+            playground_left + int(((playground_width + 240) * 0.7) - base_button_radius),
             playground_top + int(playground_height * 0.5),
-            button_radius,
+            base_button_radius,  # Base size
+            scale_factor,  # Scaling factor
             (169, 169, 169),
             (245, 245, 220),
             "TIME TRIAL"
         )
 
+        self.time_trial_high_score = None
         self.time_trial = None
+
+        self.survival = None
 
     def get_image_path(self, filename):
         return os.path.join(self.base_path, 'images', filename)
@@ -170,17 +234,17 @@ class App:
             self.time_trial.on_event(event)
 
     def update_layout(self):
-        # Recalculate positions and sizes based on new window dimensions
-        # Update background, button, and playground dimensions if needed
-        self.playground_rect = pygame.Rect(120, 75, self.width - 240, self.height - 150)
-        self.button_rect = pygame.Rect(self.width - 100, 0, 100, 50)
+        # Recalculate scaling factor
+        scale_factor = min(self.width / 1600, self.height / 1000)
 
-        # If buttons need to scale or reposition, update here
-        self.gamemode1.x = int(self.width * 0.35)  # Roughly 35% from the left for gamemode1
-        self.gamemode1.y = int(self.height * 0.5)  # Centered vertically
+        # Reposition and rescale buttons
+        self.gamemode1.x = int(self.width * 0.35)
+        self.gamemode1.y = int(self.height * 0.5)
+        self.gamemode1.size = int(self.gamemode1.base_size * scale_factor)
 
-        self.gamemode2.x = int(self.width * 0.65)  # Roughly 65% from the left for gamemode2
-        self.gamemode2.y = int(self.height * 0.5)  # Centered vertically
+        self.gamemode2.x = int(self.width * 0.65)
+        self.gamemode2.y = int(self.height * 0.5)
+        self.gamemode2.size = int(self.gamemode2.base_size * scale_factor)
     def on_loop(self):
         if self.current_screen == "time_trial" and self.time_trial:
             # Update the time trial timer

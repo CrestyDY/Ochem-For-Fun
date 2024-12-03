@@ -1,5 +1,4 @@
 import pygame
-import time
 import background
 import sqlite3 as sql
 import random as rd
@@ -7,18 +6,12 @@ import os
 from PIL import Image
 from io import BytesIO
 
-
-class Time_Trial:
+class Survival:
     def __init__(self):
         self._running = True
         self.size = self.weight, self.height = 1600, 1000
-        self.current_screen = "time_trial"
+        self.current_screen = "survival"
 
-        # Clock and timer
-        self.clock = pygame.time.Clock()
-        self.start_time = None
-        self.time_limit = 60
-        self.time_left = self.time_limit
         pygame.font.init()
         self.font = pygame.font.SysFont('comicsansms', 36)
 
@@ -80,20 +73,6 @@ class Time_Trial:
         game_type = rd.randint(1, 3)
         self.current_minigame = self.Minigame_dictionary[game_type]
         print(f"Selected minigame: {self.current_minigame}")
-    def start_timer(self):
-        self.start_time = time.time()
-
-    def update_timer(self):
-        if self.start_time:
-            elapsed_time = time.time() - self.start_time
-            self.time_left = max(0, self.time_limit - int(elapsed_time))
-        return self.time_left
-
-    def draw_timer(self, surface):
-        time_text = f"Time Left: {self.time_left}s"
-        text_surface = self.font.render(time_text, True, (255, 255, 255))
-        text_rect = text_surface.get_rect(center=(surface.get_width() // 2, 50))
-        surface.blit(text_surface, text_rect)
 
     def draw_game_over(self, surface):
         game_over_text = "Time's Up! Game Over!"
@@ -182,6 +161,7 @@ class Time_Trial:
         else:
             print("Could not set up button rectangles")
             self.button_rects = []
+
     def check_hover(self, mouse_pos):
         # Check hover for game option buttons
         if self.time_left > 0:
@@ -349,9 +329,6 @@ class Time_Trial:
             )
             surface.blit(formula_surface, formula_rect)
 
-        # Check if it's time for a new question
-        current_time = time.time()
-
         if self.feedback_displayed and current_time - self.feedback_start >= self.feedback_duration:
             print("Loading new question due to feedback duration")
             self.select_random_minigame()
@@ -402,8 +379,6 @@ class Time_Trial:
                 image_rect = self.cached_images[i].get_rect(center=button_rect.center)
                 surface.blit(self.cached_images[i], image_rect)
 
-        # Check if it's time for a new question
-        current_time = time.time()
         if self.feedback_displayed and current_time - self.feedback_start >= self.feedback_duration:
             self.select_random_minigame()
             self.load_new_question()
@@ -454,8 +429,6 @@ class Time_Trial:
             )
             surface.blit(structure_image, image_rect)
 
-        # Check if it's time for a new question
-        current_time = time.time()
         if self.feedback_displayed and current_time - self.feedback_start >= self.feedback_duration:
             self.select_random_minigame()
             self.load_new_question()
@@ -463,7 +436,6 @@ class Time_Trial:
             # Time's up for this question
             self.selected_answer = -1  # Force incorrect
             self.handle_answer()
-
 
     def on_event(self, event):
         if event.type == pygame.QUIT:
@@ -571,4 +543,3 @@ class Time_Trial:
                 self.toggle_background()
             elif self.time_left > 0:  # Only handle clicks if the game is still running
                 self.handle_click(event.pos)
-
