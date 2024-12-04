@@ -180,8 +180,10 @@ class App:
 
         try:
             with open('High_Scores.txt', 'r') as file:
+                print("Succesfully read file")
                 self.time_trial_high_score = int(file.read().strip())
         except (FileNotFoundError, ValueError):
+            print("Error finding file")
             self.time_trial_high_score = 0
 
         pygame.display.flip()

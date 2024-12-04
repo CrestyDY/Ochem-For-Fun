@@ -91,7 +91,7 @@ class Time_Trial:
     def save_high_score(self):
         """Save the high score to a file if current score is higher"""
         if self.score > self.high_score:
-            with open('time_trial_high_score.txt', 'w') as file:
+            with open('High_Scores.txt', 'w') as file:
                 file.write(str(self.score))
             self.high_score = self.score
 
