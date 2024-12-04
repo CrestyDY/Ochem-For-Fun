@@ -78,7 +78,6 @@ class App:
         self.width = int(1600 * scale_factor * 0.9)
         self.height = int(1000 * scale_factor * 0.9)
         self.size = (self.width, self.height)
-
         self._running = True
         self._display_surf = None
         self.current_screen = "playground"
@@ -92,6 +91,8 @@ class App:
 
         # Dynamically position button
         self.button_rect = pygame.Rect(self.width - 100, 0, 100, 50)
+        self.music_rect = pygame.Rect(self.width - 100, 50, 100, 50)
+        self.music_play = True
 
         # Playground scaling with centering
         playground_width = int(1200 * scale_factor)
@@ -177,6 +178,12 @@ class App:
         Icon = pygame.image.load(self.get_image_path("background.png"))
         pygame.display.set_icon(Icon)
 
+        try:
+            with open('High_Scores.txt', 'r') as file:
+                self.time_trial_high_score = int(file.read().strip())
+        except (FileNotFoundError, ValueError):
+            self.time_trial_high_score = 0
+
         pygame.display.flip()
         self._running = True
 
@@ -187,6 +194,15 @@ class App:
         else:
             self.current_background = self.background_dark
         self.dark_mode = not self.dark_mode
+
+    def pause_music(self):
+        if self.music_play:
+            self.music_play = False
+            pygame.mixer_music.pause()
+        elif not self.music_play:
+            self.music_play = True
+            pygame.mixer_music.unpause()
+
 
     def calculate_scaling_factor(self):
         # Calculate scaling factors based on the current size and original dimensions
@@ -208,6 +224,9 @@ class App:
             if self.button_rect.collidepoint(event.pos):
                 self.toggle_background()
 
+            if self.music_rect.collidepoint(event.pos):
+                self.pause_music()
+
             # Handle gamemode button clicks only in playground screen
             if self.current_screen == "playground":
                 if self.gamemode1.is_clicked(event.pos):
@@ -218,8 +237,15 @@ class App:
                     self.time_trial.start_timer()
 
             # Handle return to menu from time trial
-            if self.current_screen == "time_trial" and self.time_trial and self.time_trial.time_left <= 0:
-                if self.time_trial.game_over_button_rect.collidepoint(event.pos):
+            if self.current_screen == "time_trial" and self.time_trial:
+                # Check for return to menu during game
+                if self.time_trial.return_to_menu_rect.collidepoint(event.pos):
+                    # Return to playground screen
+                    self.current_screen = "playground"
+                    self.time_trial = None
+
+                # Existing game over button logic
+                elif self.time_trial.time_left <= 0 and self.time_trial.game_over_button_rect.collidepoint(event.pos):
                     # Return to playground screen
                     self.current_screen = "playground"
                     self.time_trial = None
@@ -269,6 +295,16 @@ class App:
             button_text_rect = button_text_surface.get_rect(center=self.button_rect.center)
             self._display_surf.blit(button_text_surface, button_text_rect)
 
+            music_button_color = (169, 169, 169) if self.dark_mode else (230, 230, 230)
+            pygame.draw.rect(self._display_surf, button_color, self.music_rect, border_radius=10)  # Rounded corners
+
+            music_text = "Paused" if not self.music_play else "Playing"
+
+            music_font = pygame.font.Font('freesansbold.ttf', 20)
+            music_text_surface = music_font.render(music_text, True, text_color)
+            music_text_rect = music_text_surface.get_rect(center=self.music_rect.center)
+            self._display_surf.blit(music_text_surface, music_text_rect)
+
             # Set the transparent playground surface with rounded corners
             playground_surface = pygame.Surface((self.playground_rect.width, self.playground_rect.height), pygame.SRCALPHA)
             playground_color = (150, 150, 150, 180) if self.current_background == self.background_dark else (180, 180, 180, 150)
@@ -278,15 +314,19 @@ class App:
             # Scaling factors
             width_scale, height_scale = self.calculate_scaling_factor()
 
-            # Title text
+            # Adjust the title font size based on height scaling
             title_font = pygame.font.SysFont('comicsansms', int(self.base_title_font_size * height_scale))
+
+            # Render the title text
             title_text = "WELCOME TO OCHEM SURVIVAL !"
-            title_surface = title_font.render(title_text, True, (0, 0, 0) if self.current_background == self.background_dark else (255,255,255))
-            title_position = (
-                int(self.playground_rect.x + self.base_title_offset[0] * width_scale),
-                int(self.playground_rect.y + self.base_title_offset[1] * height_scale)
-            )
-            self._display_surf.blit(title_surface, title_position)
+            text_color = (0, 0, 0) if self.current_background == self.background_dark else (255, 255, 255)
+            title_surface = title_font.render(title_text, True, text_color)
+
+            # Get the rectangle for the text and center it horizontally
+            title_rect = title_surface.get_rect()
+            title_rect.centerx = self.playground_rect.centerx
+            title_rect.y = int(self.playground_rect.y + self.base_title_offset[1] * height_scale)  # Maintain vertical positioning
+            self._display_surf.blit(title_surface, title_rect.topleft)
 
             # Subtitle text
             subtitle_font = pygame.font.SysFont('comicsansms', int(self.base_subtitle_font_size * height_scale))
@@ -309,7 +349,25 @@ class App:
             self._display_surf.blit(subsubtitle_surface, subsubtitle_position)
             # Display Gamemode buttons
             self.gamemode1.draw(self._display_surf)
+
+            high_score_font = pygame.font.SysFont('comicsansms', 16)
             self.gamemode2.draw(self._display_surf)
+            button_center_x = self.gamemode2.x
+            button_center_y = self.gamemode2.y
+
+            # Check if we have a high score (loaded during initialization)
+            if hasattr(self, 'time_trial_high_score') and self.time_trial_high_score is not None:
+                # Render high score text
+                high_score_text = f"High Score: {self.time_trial_high_score}"
+                high_score_surface = high_score_font.render(high_score_text, True, (0, 0, 0))
+
+                # Position the high score text below the button
+                high_score_rect = high_score_surface.get_rect(
+                    centerx=button_center_x,
+                    top=button_center_y + self.gamemode2.size + 10  # 10 pixels below the button
+                )
+
+                self._display_surf.blit(high_score_surface, high_score_rect)
 
         elif self.current_screen == "time_trial" and self.time_trial:
             self.time_trial.run_once(self._display_surf)

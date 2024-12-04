@@ -71,9 +71,29 @@ class Time_Trial:
             50
         )
         self.return_to_menu = False
+        self.return_to_menu_rect = pygame.Rect((self.playground_rect.topleft[0] + 20, self.playground_rect.topleft[1]+20), (100, 50))
+        self.menu_hover_state = False
+
+        self.high_score = self.load_high_score()
+
 
     def get_image_path(self, filename):
         return os.path.join(self.base_path, 'images', filename)
+
+    def load_high_score(self):
+        """Load the high score from a file"""
+        try:
+            with open('High_Scores.txt', 'r') as file:
+                return int(file.read().strip())
+        except (FileNotFoundError, ValueError):
+            return 0
+
+    def save_high_score(self):
+        """Save the high score to a file if current score is higher"""
+        if self.score > self.high_score:
+            with open('time_trial_high_score.txt', 'w') as file:
+                file.write(str(self.score))
+            self.high_score = self.score
 
     def select_random_minigame(self):
         """Randomly select a minigame type"""
@@ -116,6 +136,15 @@ class Time_Trial:
         button_text_rect = button_text_surface.get_rect(center=self.game_over_button_rect.center)
         surface.blit(button_text_surface, button_text_rect)
 
+        self.save_high_score()
+        high_score_font = pygame.font.SysFont('comicsansms', 24)
+        high_score_text = f"High Score: {self.high_score}"
+        high_score_surface = high_score_font.render(high_score_text, True, (0, 0, 0))
+        high_score_rect = high_score_surface.get_rect(
+            center=(surface.get_width() // 2, surface.get_height() // 2 + 50)
+        )
+        surface.blit(high_score_surface, high_score_rect)
+
     def toggle_background(self):
         "Toggle between light and dark backgrounds."
         if self.dark_mode:
@@ -146,7 +175,7 @@ class Time_Trial:
         if self.current_minigame == "Most Acidic":
             # Keep existing settings for Most Acidic (image-based)
             start_x = self.playground_rect.x + 350
-            start_y = self.playground_rect.y + 100
+            start_y = self.playground_rect.y + 125
             button_width = self.button_width
             button_height = self.button_height
             button_margin = self.button_margin
@@ -154,7 +183,7 @@ class Time_Trial:
         elif self.current_minigame == "Name To Structure":
             # Adjust for Name to Structure (image-based buttons)
             start_x = self.playground_rect.x + 350
-            start_y = self.playground_rect.y + 100
+            start_y = self.playground_rect.y + 125
             button_width = self.button_width
             button_height = self.button_height
             button_margin = self.button_margin
@@ -190,6 +219,10 @@ class Time_Trial:
                     self.button_hover_states[i] = True
                 else:
                     self.button_hover_states[i] = False
+            if self.return_to_menu_rect.collidepoint(mouse_pos):
+                self.menu_hover_state = True
+            else:
+                self.menu_hover_state = False
 
         # Check hover for game over button
         if self.time_left <= 0:
@@ -379,7 +412,7 @@ class Time_Trial:
         compound_text = str(self.current_compounds[self.correct_answer][1])
         compound_surface = compound_font.render(compound_text, True, (0, 0, 0))
         compound_rect = compound_surface.get_rect(
-            center=(self.playground_rect.centerx, self.playground_rect.y + 75)
+            center=(self.playground_rect.centerx, self.playground_rect.y + 85)
         )
         surface.blit(compound_surface, compound_rect)
 
@@ -518,6 +551,16 @@ class Time_Trial:
         button_text_rect = button_text_surface.get_rect(center=self.button_rect.center)
         surface.blit(button_text_surface, button_text_rect)
 
+        # Render the return to menu button
+        menu_color = (140, 140, 140) if self.menu_hover_state else (169, 169, 169) if self.dark_mode else (
+        230, 230, 230)
+        pygame.draw.rect(surface, menu_color, self.return_to_menu_rect, border_radius=10)
+        menu_font = pygame.font.SysFont('comicsansms', 20)
+        menu_text = "Menu"
+        menu_surface = menu_font.render(menu_text, True, text_color)
+        menu_rect = menu_surface.get_rect(center=self.return_to_menu_rect.center)
+        surface.blit(menu_surface, menu_rect)
+
         # Update and draw timer
         if self.start_time is None:
             self.start_timer()
@@ -563,12 +606,19 @@ class Time_Trial:
             # Check hover states for buttons
             self.check_hover(event.pos)
         elif event.type == pygame.MOUSEBUTTONDOWN:
+            # Game over state button
             if self.time_left <= 0 and self.game_over_button_rect.collidepoint(event.pos):
-                # Return to menu button clicked
                 self.return_to_menu = True
                 self._running = False
+            # Dark mode toggle
             elif self.button_rect.collidepoint(event.pos):
                 self.toggle_background()
+            # Return to menu during game
+            elif self.return_to_menu_rect.collidepoint(event.pos):
+                print("Return to Menu button clicked!")
+                print(f"Time left: {self.time_left}")
+                self.return_to_menu = True
+                self._running = False
             elif self.time_left > 0:  # Only handle clicks if the game is still running
                 self.handle_click(event.pos)
 

@@ -65,6 +65,8 @@ class Survival:
         )
         self.return_to_menu = False
 
+        self.remaining_lives = 3
+
     def get_image_path(self, filename):
         return os.path.join(self.base_path, 'images', filename)
 
