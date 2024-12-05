@@ -334,21 +334,19 @@ class App:
             subtitle_font = pygame.font.SysFont('comicsansms', int(self.base_subtitle_font_size * height_scale))
             subtitle_text = "Are You Ready To Take On This Challenge ?"
             subtitle_surface = subtitle_font.render(subtitle_text, True, (0, 0, 0) if self.current_background == self.background_dark else (255,255,255))
-            subtitle_position = (
-                int(self.playground_rect.x + self.base_subtitle_offset[0] * width_scale),
-                int(self.playground_rect.y + self.base_subtitle_offset[1] * height_scale)
-            )
-            self._display_surf.blit(subtitle_surface, subtitle_position)
+            subtitle_rect = subtitle_surface.get_rect()
+            subtitle_rect.centerx = self.playground_rect.centerx
+            subtitle_rect.y = int(self.playground_rect.y + self.base_subtitle_offset[1] * height_scale)
+            self._display_surf.blit(subtitle_surface, subtitle_rect.topleft)
 
             # Sub-subtitle text
             subsubtitle_font = pygame.font.SysFont('comicsansms', int(self.base_subsubtitle_font_size * height_scale))
             subsubtitle_text = "Select a Gamemode"
             subsubtitle_surface = subsubtitle_font.render(subsubtitle_text, True, (0, 0, 0) if self.current_background == self.background_dark else (255,255,255))
-            subsubtitle_position = (
-                int(self.playground_rect.x + self.base_subsubtitle_offset[0] * width_scale),
-                int(self.playground_rect.y + self.base_subsubtitle_offset[1] * height_scale)
-            )
-            self._display_surf.blit(subsubtitle_surface, subsubtitle_position)
+            subsubtitle_rect = subsubtitle_surface.get_rect()
+            subsubtitle_rect.centerx = self.playground_rect.centerx
+            subsubtitle_rect.y = int(self.playground_rect.y + self.base_subsubtitle_offset[1]*height_scale)
+            self._display_surf.blit(subsubtitle_surface, subsubtitle_rect.topleft)
             # Display Gamemode buttons
             self.gamemode1.draw(self._display_surf)
 
