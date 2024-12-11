@@ -2,6 +2,7 @@ import pygame
 import background
 from pygame.locals import *
 from Time_Trial import Time_Trial
+from Survival import Survival
 import math
 import sys
 import os
@@ -249,6 +250,15 @@ class App:
             if self.current_screen == "playground":
                 if self.gamemode1.is_clicked(event.pos):
                     self.current_screen = "survival"
+                    self.survival = Survival(
+                        width=self.width,
+                        height=self.height,
+                        playground_rect=self.playground_rect,
+                        base_path=self.base_path,
+                        current_background=self.current_background,
+                        dark_mode=self.dark_mode,
+                        music_play= self.music_play,
+                    )
                 elif self.gamemode2.is_clicked(event.pos):
                     self.current_screen = "time_trial"
                     self.time_trial = Time_Trial(
@@ -275,6 +285,13 @@ class App:
                     # Return to playground screen
                     self.current_screen = "playground"
                     self.time_trial = None
+            if self.current_screen == "survival" and self.survival:
+                if self.survival.return_to_menu_rect.collidepoint(event.pos):
+                    self.current_screen = "playground"
+                    self.survival = None
+                elif self.survival.remaining_lives == 0 and self.survival.game_over_button_rect.collidepoint(event.pos):
+                    self.current_screen = "playground"
+                    self.survival = None
 
         # Handle mouse motion for hover effect in playground screen
         if event.type == pygame.MOUSEMOTION and self.current_screen == "playground":
@@ -417,6 +434,8 @@ class App:
 
         elif self.current_screen == "time_trial" and self.time_trial:
             self.time_trial.run_once(self._display_surf)
+        elif self.current_screen == "survival" and self.survival:
+            self.survival.run_once(self._display_surf)
 
         pygame.display.flip()
 

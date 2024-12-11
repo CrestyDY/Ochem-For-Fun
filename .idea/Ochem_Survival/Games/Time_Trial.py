@@ -10,7 +10,6 @@ import math
 
 class Time_Trial:
     def __init__(self, width, height, playground_rect, base_path, current_background, dark_mode, music_play):
-        # Store UI properties passed from App
         # Playground rect from App
         self.playground_rect = playground_rect
         self.scale_factor = min(width / 1600, height / 1000)
@@ -232,6 +231,36 @@ class Time_Trial:
             return text
         return text[:max_length] + '...'
 
+    def render_wrapped_text(self, text, font, max_width, color=(0, 0, 0)):
+        """
+        Render text that wraps or truncates to fit within max_width
+        """
+        words = text.split()
+        lines = []
+        current_line = []
+
+        for word in words:
+            test_line = ' '.join(current_line + [word])
+            test_surface = font.render(test_line, True, color)
+
+            if test_surface.get_width() <= max_width:
+                current_line.append(word)
+            else:
+                # If first word is too long, truncate
+                if not current_line:
+                    test_surface = font.render(word[:int(max_width / font.get_height())] + '...', True, color)
+                    lines.append(test_surface)
+                    break
+
+                # Finish current line and start a new one
+                lines.append(font.render(' '.join(current_line), True, color))
+                current_line = [word]
+
+        if current_line:
+            lines.append(font.render(' '.join(current_line), True, color))
+
+        return lines
+
     def setup_button_rects(self):
         """
         Create button rectangles dynamically based on minigame type and scaling
@@ -241,25 +270,29 @@ class Time_Trial:
             self.select_random_minigame()
 
         scale_factor = self.scale_factor
-        button_width = self.button_width
-        button_height = self.button_height
-        button_margin = self.button_margin
+        playground_width = self.playground_rect.width
+        playground_height = self.playground_rect.height
 
-        # Calculate the total width and height of the button grid
+        # Dynamically calculate button sizes based on playground dimensions
+        button_width = int(playground_width * 0.20)  # 22% of playground width
+        button_height = int(playground_height * 0.31)  # 30% of playground height
+        button_margin = int(playground_width * 0.03)  # 2% of playground width for margin
+
+        # Calculate starting x and y to center the grid in the playground
         total_grid_width = 2 * button_width + button_margin
         total_grid_height = 2 * button_height + button_margin
 
-        # Calculate starting x and y to center the grid in the playground
         start_x = self.playground_rect.x + (self.playground_rect.width - total_grid_width) // 2
         start_y = self.playground_rect.y + (self.playground_rect.height - total_grid_height) // 1.60
 
+        # Adjust for Structure To Name minigame
         if self.current_minigame == "Structure To Name":
-            button_width = int(475 * scale_factor)
-            button_height = int(100 * scale_factor)
-            button_margin = int(30 * scale_factor)
-            start_x = self.playground_rect.x + (self.playground_rect.width - (2*button_width)-button_margin) // 2
-            start_y = self.playground_rect.y + self.playground_rect.height * 0.6
+            button_width = int(playground_width * 0.40)
+            button_height = int(playground_height * 0.15)  # Shorter for text
+            button_margin = int(playground_width * 0.02)
 
+            start_x = self.playground_rect.x + (self.playground_rect.width - (2 * button_width) - button_margin) // 2
+            start_y = self.playground_rect.y + self.playground_rect.height * 0.5
 
         # Create button rectangles
         self.button_rects = [
@@ -520,14 +553,14 @@ class Time_Trial:
                 surface.blit(self.cached_images[i], image_rect)
 
             # Draw formula
-            formula_font = pygame.font.SysFont('comicsansms', 14)
-            formula_text = self.truncate_text(compound[2]) # iupac
-            formula_surface = formula_font.render(formula_text, True, (0, 0, 0))
-            formula_rect = formula_surface.get_rect(
-                centerx=button_rect.centerx,
-                top=button_rect.bottom + 10
-            )
-            surface.blit(formula_surface, formula_rect)
+            # formula_font = pygame.font.SysFont('comicsansms', 14)
+            # formula_text = self.truncate_text(compound[2]) # iupac
+            # formula_surface = formula_font.render(formula_text, True, (0, 0, 0))
+            # formula_rect = formula_surface.get_rect(
+            #     centerx=button_rect.centerx,
+            #     top=button_rect.bottom + 10
+            # )
+            # surface.blit(formula_surface, formula_rect)
 
         # Check if it's time for a new question
         current_time = time.time()
@@ -633,12 +666,19 @@ class Time_Trial:
                 button_color = (0, 255, 0) if i == self.correct_answer else (255, 0, 0)
             pygame.draw.rect(surface, button_color, button_rect, border_radius=10)
 
-            # Draw button text (IUPAC name)
             name_font = pygame.font.SysFont('comicsansms', 16)
-            name_text = self.truncate_text(compound[1], max_length=50)  # Truncate long names
-            name_surface = name_font.render(name_text, True, (0, 0, 0))
-            name_rect = name_surface.get_rect(center=button_rect.center)
-            surface.blit(name_surface, name_rect)
+            name_lines = self.render_wrapped_text(compound[1], name_font, button_rect.width - 10)
+            total_text_height = len(name_lines) * name_font.get_linesize()
+
+            # Calculate the starting y position to center the text block
+            start_y = button_rect.centery - total_text_height // 2
+
+            for i, line_surface in enumerate(name_lines):
+                line_rect = line_surface.get_rect(
+                    centerx=button_rect.centerx,
+                    top=start_y + i * name_font.get_linesize()
+                )
+                surface.blit(line_surface, line_rect)
 
         # Draw the structure to identify
         if self.cached_images[self.correct_answer]:

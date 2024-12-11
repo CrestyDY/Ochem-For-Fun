@@ -3,28 +3,25 @@ import background
 import sqlite3 as sql
 import random as rd
 import os
+import time
 from PIL import Image
 from io import BytesIO
 
 class Survival:
-    def __init__(self):
-        self._running = True
-        self.size = self.weight, self.height = 1600, 1000
-        self.current_screen = "survival"
+    def __init__(self, width, height, playground_rect, base_path, current_background, dark_mode, music_play):
+        # Playground rect from App
+        self.playground_rect = playground_rect
+        self.scale_factor = min(width / 1600, height / 1000)
+        self.width = width
+        self.height = height
+        self.size = (width, height)
 
-        pygame.font.init()
-        self.font = pygame.font.SysFont('comicsansms', 36)
+        # Background and mode
+        self.base_path = base_path
 
         # Background setup
-        self.base_path = os.path.dirname(os.path.abspath(__file__))
-        self.background_light = background.Background(self.get_image_path('background.jpg'),[0,0])
-        self.background_dark = background.Background(self.get_image_path('background-dark-mode.jpg'),[0,0])
-        self.current_background = self.background_light
-        self.dark_mode = False
-        self.button_rect = pygame.Rect(1455, 0, 100, 50)
-
-        # Playground
-        self.playground_rect = pygame.Rect(120, 75, 1360, 850)
+        self.background_light = background.Background(os.path.join(base_path, 'images', 'background.jpg'), [0, 0])
+        self.background_dark = background.Background(os.path.join(base_path, 'images', 'background-dark-mode.jpg'), [0, 0])
 
         # Game state
         self.selected_answer = None
@@ -32,7 +29,7 @@ class Survival:
         self.correct_answer = None
         self.score = 0
         self.current_question_start = None
-        self.question_duration = 60  # Time per question in seconds
+        self.question_duration = float("inf")
         self.feedback_displayed = False
         self.feedback_start = None
         self.feedback_duration = 0.5
@@ -47,12 +44,11 @@ class Survival:
         self.button_height = 300
         self.button_margin = 50
         self.button_rects = []
-        self.button_color = (200,200,200)
-        self.setup_button_rects()
+        self.button_color = (200, 200, 200)
 
         self.cached_images = []
 
-        #Hover effect
+        # Hover effect
         self.button_hover_states = [False, False, False, False]
         self.game_over_button_hover = False
 
@@ -64,11 +60,84 @@ class Survival:
             50
         )
         self.return_to_menu = False
+        self.menu_hover_state = False
+
+        # Initialize UI elements with initial scaling
+
+        # Button rects based on App's width
+        self.button_rect = pygame.Rect(width - 100, 0, 100, 50)
+        self.music_rect = pygame.Rect(width - 100, 50, 100, 50)
+
+        # Return to menu button
+        self.return_to_menu_rect = pygame.Rect(
+            (self.playground_rect.topleft[0] + 20, self.playground_rect.topleft[1] + 20),
+            (100, 50)
+        )
+        self.initialize_ui_elements()
+        self.setup_button_rects()
+
+
+        # Remove duplicate initialization of these attributes
+        self._running = True
+        self.current_screen = "survival"
+
+        # Use passed background and dark mode
+        self.current_background = current_background
+        self.dark_mode = dark_mode
+        self.music_play = music_play
+
 
         self.remaining_lives = 3
 
     def get_image_path(self, filename):
         return os.path.join(self.base_path, 'images', filename)
+
+    def initialize_ui_elements(self):
+        """
+        Reinitialize all UI elements with proper scaling
+        """
+        # Calculate scaled dimensions
+        scale_factor = self.scale_factor
+
+        # Button rects based on scaled width
+        button_width = int(100 * scale_factor)
+        button_height = int(50 * scale_factor)
+        self.button_rect = pygame.Rect(self.width - button_width, 0, button_width, button_height)
+        self.music_rect = pygame.Rect(self.width - button_width, button_height, button_width, button_height)
+
+        # Return to menu button with scaling
+        self.return_to_menu_rect = pygame.Rect(
+            (self.playground_rect.topleft[0] + int(20 * scale_factor),
+             self.playground_rect.topleft[1] + int(20 * scale_factor)),
+            (int(100 * scale_factor), int(50 * scale_factor))
+        )
+
+        # Game over button with scaling
+        self.game_over_button_rect = pygame.Rect(
+            self.playground_rect.centerx - int(150 * scale_factor),
+            self.playground_rect.centery + int(100 * scale_factor),
+            int(300 * scale_factor),
+            int(50 * scale_factor)
+        )
+
+        # Scaled button dimensions for answer buttons
+        self.button_width = int(300 * scale_factor)
+        self.button_height = int(300 * scale_factor)
+        self.button_margin = int(50 * scale_factor)
+
+        # Scale font sizes
+        title_font_size = max(int(36 * scale_factor), 12)
+        small_font_size = max(int(16 * scale_factor), 10)
+
+        # Reinitialize fonts with scaled sizes
+        self.font = pygame.font.SysFont('comicsansms', title_font_size)
+        self.small_font = pygame.font.SysFont('comicsansms', small_font_size)
+
+    def Wrong_answer(self, surface):
+        if self.remaining_lives > 1:
+            self.remaining_lives -= 1
+        elif self.remaining_lives == 1:
+            self.draw_game_over(surface)
 
     def select_random_minigame(self):
         """Randomly select a minigame type"""
@@ -166,7 +235,7 @@ class Survival:
 
     def check_hover(self, mouse_pos):
         # Check hover for game option buttons
-        if self.time_left > 0:
+        if self.remaining_lives > 0:
             for i, rect in enumerate(self.button_rects):
                 if rect.collidepoint(mouse_pos):
                     self.button_hover_states[i] = True
@@ -174,7 +243,7 @@ class Survival:
                     self.button_hover_states[i] = False
 
         # Check hover for game over button
-        if self.time_left <= 0:
+        if self.remaining_lives <= 0:
             self.game_over_button_hover = self.game_over_button_rect.collidepoint(mouse_pos)
 
     def load_new_question(self):
@@ -243,7 +312,7 @@ class Survival:
                 if not compounds:
                     print("No compounds found for Structure To Name")
                     return False
-                self.corrent_answer = 0
+                self.correct_answer = 0
                 display_order = list(range(4))
                 rd.shuffle(display_order)
                 self.current_compounds = compounds
@@ -331,11 +400,11 @@ class Survival:
             )
             surface.blit(formula_surface, formula_rect)
 
-        if self.feedback_displayed and current_time - self.feedback_start >= self.feedback_duration:
+        if self.feedback_displayed:
             print("Loading new question due to feedback duration")
             self.select_random_minigame()
             self.load_new_question()
-        elif not self.feedback_displayed and current_time - self.current_question_start >= self.question_duration:
+        elif not self.feedback_displayed:
             # Time's up for this question
             self.selected_answer = -1  # Force incorrect
             self.handle_answer()
@@ -381,10 +450,10 @@ class Survival:
                 image_rect = self.cached_images[i].get_rect(center=button_rect.center)
                 surface.blit(self.cached_images[i], image_rect)
 
-        if self.feedback_displayed and current_time - self.feedback_start >= self.feedback_duration:
+        if self.feedback_displayed:
             self.select_random_minigame()
             self.load_new_question()
-        elif not self.feedback_displayed and current_time - self.current_question_start >= self.question_duration:
+        elif not self.feedback_displayed:
             # Time's up for this question
             self.selected_answer = -1  # Force incorrect
             self.handle_answer()
@@ -431,10 +500,10 @@ class Survival:
             )
             surface.blit(structure_image, image_rect)
 
-        if self.feedback_displayed and current_time - self.feedback_start >= self.feedback_duration:
+        if self.feedback_displayed:
             self.select_random_minigame()
             self.load_new_question()
-        elif not self.feedback_displayed and current_time - self.current_question_start >= self.question_duration:
+        elif not self.feedback_displayed:
             # Time's up for this question
             self.selected_answer = -1  # Force incorrect
             self.handle_answer()
@@ -445,17 +514,16 @@ class Survival:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if self.button_rect.collidepoint(event.pos):
                 self.toggle_background()
-            elif self.time_left > 0:  # Only handle clicks if the game is still running
+            elif self.remaining_lives > 0:  # Only handle clicks if the game is still running
                 self.handle_click(event.pos)
 
     def handle_answer(self):
         """Process the selected answer and update game state"""
         if self.selected_answer == self.correct_answer:
             self.score += 1
-
-
+        else:
+            self.remaining_lives -= 1
         self.feedback_displayed = True
-        self.feedback_start = time.time()
 
     def handle_click(self, pos):
         """Handle mouse clicks for answer selection"""
@@ -492,14 +560,7 @@ class Survival:
         button_text_rect = button_text_surface.get_rect(center=self.button_rect.center)
         surface.blit(button_text_surface, button_text_rect)
 
-        # Update and draw timer
-        if self.start_time is None:
-            self.start_timer()
-
-        self.time_left = self.update_timer()
-
-        if self.time_left > 0:
-            self.draw_timer(surface)
+        if self.remaining_lives > 0:
 
             # If no current question or previous question was answered, load a new question
             if not self.current_compounds or self.question_answered:
@@ -537,11 +598,11 @@ class Survival:
             # Check hover states for buttons
             self.check_hover(event.pos)
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            if self.time_left <= 0 and self.game_over_button_rect.collidepoint(event.pos):
+            if self.remaining_lives <= 0 and self.game_over_button_rect.collidepoint(event.pos):
                 # Return to menu button clicked
                 self.return_to_menu = True
                 self._running = False
             elif self.button_rect.collidepoint(event.pos):
                 self.toggle_background()
-            elif self.time_left > 0:  # Only handle clicks if the game is still running
+            elif self.remaining_lives > 0:  # Only handle clicks if the game is still running
                 self.handle_click(event.pos)
