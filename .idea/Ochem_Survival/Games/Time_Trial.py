@@ -6,13 +6,24 @@ import random as rd
 import os
 from PIL import Image
 from io import BytesIO
-
+import math
 
 class Time_Trial:
-    def __init__(self):
-        self._running = True
-        self.size = self.weight, self.height = 1600, 1000
-        self.current_screen = "time_trial"
+    def __init__(self, width, height, playground_rect, base_path, current_background, dark_mode, music_play):
+        # Store UI properties passed from App
+        # Playground rect from App
+        self.playground_rect = playground_rect
+        self.scale_factor = min(width / 1600, height / 1000)
+        self.width = width
+        self.height = height
+        self.size = (width, height)
+
+        # Background and mode
+        self.base_path = base_path
+
+        # Background setup
+        self.background_light = background.Background(os.path.join(base_path, 'images', 'background.jpg'), [0, 0])
+        self.background_dark = background.Background(os.path.join(base_path, 'images', 'background-dark-mode.jpg'), [0, 0])
 
         # Clock and timer
         self.clock = pygame.time.Clock()
@@ -21,17 +32,6 @@ class Time_Trial:
         self.time_left = self.time_limit
         pygame.font.init()
         self.font = pygame.font.SysFont('comicsansms', 36)
-
-        # Background setup
-        self.base_path = os.path.dirname(os.path.abspath(__file__))
-        self.background_light = background.Background(self.get_image_path('background.jpg'),[0,0])
-        self.background_dark = background.Background(self.get_image_path('background-dark-mode.jpg'),[0,0])
-        self.current_background = self.background_light
-        self.dark_mode = False
-        self.button_rect = pygame.Rect(1455, 0, 100, 50)
-
-        # Playground
-        self.playground_rect = pygame.Rect(120, 75, 1360, 850)
 
         # Game state
         self.selected_answer = None
@@ -54,12 +54,11 @@ class Time_Trial:
         self.button_height = 300
         self.button_margin = 50
         self.button_rects = []
-        self.button_color = (200,200,200)
-        self.setup_button_rects()
+        self.button_color = (200, 200, 200)
 
         self.cached_images = []
 
-        #Hover effect
+        # Hover effect
         self.button_hover_states = [False, False, False, False]
         self.game_over_button_hover = False
 
@@ -71,14 +70,78 @@ class Time_Trial:
             50
         )
         self.return_to_menu = False
-        self.return_to_menu_rect = pygame.Rect((self.playground_rect.topleft[0] + 20, self.playground_rect.topleft[1]+20), (100, 50))
         self.menu_hover_state = False
+
+        # Initialize UI elements with initial scaling
+
+        # Button rects based on App's width
+        self.button_rect = pygame.Rect(width - 100, 0, 100, 50)
+        self.music_rect = pygame.Rect(width - 100, 50, 100, 50)
+
+        # Return to menu button
+        self.return_to_menu_rect = pygame.Rect(
+            (self.playground_rect.topleft[0] + 20, self.playground_rect.topleft[1] + 20),
+            (100, 50)
+        )
+        self.initialize_ui_elements()
+        self.setup_button_rects()
+
+
+        # Remove duplicate initialization of these attributes
+        self._running = True
+        self.current_screen = "time_trial"
+
 
         self.high_score = self.load_high_score()
 
+        # Use passed background and dark mode
+        self.current_background = current_background
+        self.dark_mode = dark_mode
+        self.music_play = music_play
 
     def get_image_path(self, filename):
         return os.path.join(self.base_path, 'images', filename)
+
+    def initialize_ui_elements(self):
+        """
+        Reinitialize all UI elements with proper scaling
+        """
+        # Calculate scaled dimensions
+        scale_factor = self.scale_factor
+
+        # Button rects based on scaled width
+        button_width = int(100 * scale_factor)
+        button_height = int(50 * scale_factor)
+        self.button_rect = pygame.Rect(self.width - button_width, 0, button_width, button_height)
+        self.music_rect = pygame.Rect(self.width - button_width, button_height, button_width, button_height)
+
+        # Return to menu button with scaling
+        self.return_to_menu_rect = pygame.Rect(
+            (self.playground_rect.topleft[0] + int(20 * scale_factor),
+             self.playground_rect.topleft[1] + int(20 * scale_factor)),
+            (int(100 * scale_factor), int(50 * scale_factor))
+        )
+
+        # Game over button with scaling
+        self.game_over_button_rect = pygame.Rect(
+            self.playground_rect.centerx - int(150 * scale_factor),
+            self.playground_rect.centery + int(100 * scale_factor),
+            int(300 * scale_factor),
+            int(50 * scale_factor)
+        )
+
+        # Scaled button dimensions for answer buttons
+        self.button_width = int(300 * scale_factor)
+        self.button_height = int(300 * scale_factor)
+        self.button_margin = int(50 * scale_factor)
+
+        # Scale font sizes
+        title_font_size = max(int(36 * scale_factor), 12)
+        small_font_size = max(int(16 * scale_factor), 10)
+
+        # Reinitialize fonts with scaled sizes
+        self.font = pygame.font.SysFont('comicsansms', title_font_size)
+        self.small_font = pygame.font.SysFont('comicsansms', small_font_size)
 
     def load_high_score(self):
         """Load the high score from a file"""
@@ -109,10 +172,20 @@ class Time_Trial:
             self.time_left = max(0, self.time_limit - int(elapsed_time))
         return self.time_left
 
+    def pause_music(self):
+        if self.music_play:
+            self.music_play = False
+            pygame.mixer_music.pause()
+        elif not self.music_play:
+            self.music_play = True
+            pygame.mixer_music.unpause()
+
     def draw_timer(self, surface):
         time_text = f"Time Left: {self.time_left}s"
         text_surface = self.font.render(time_text, True, (255, 255, 255))
-        text_rect = text_surface.get_rect(center=(surface.get_width() // 2, 50))
+        text_rect = text_surface.get_rect()
+        text_rect.centerx = self.playground_rect.centerx
+        text_rect.y = self.playground_rect.y
         surface.blit(text_surface, text_rect)
 
     def draw_game_over(self, surface):
@@ -146,7 +219,7 @@ class Time_Trial:
         surface.blit(high_score_surface, high_score_rect)
 
     def toggle_background(self):
-        "Toggle between light and dark backgrounds."
+        """Toggle between light and dark backgrounds."""
         if self.dark_mode:
             self.current_background = self.background_light
         else:
@@ -160,57 +233,78 @@ class Time_Trial:
         return text[:max_length] + '...'
 
     def setup_button_rects(self):
-        """Create rectangles for answer buttons dynamically based on minigame type"""
-        start_x = None
-        start_y = None
-        button_width = None
-        button_height = None
-        button_margin = None
-
+        """
+        Create button rectangles dynamically based on minigame type and scaling
+        with positioning relative to the playground rect
+        """
         if self.current_minigame is None:
-            # Select a random minigame if none is selected
             self.select_random_minigame()
 
+        scale_factor = self.scale_factor
+        button_width = self.button_width
+        button_height = self.button_height
+        button_margin = self.button_margin
 
-        if self.current_minigame == "Most Acidic":
-            # Keep existing settings for Most Acidic (image-based)
-            start_x = self.playground_rect.x + 350
-            start_y = self.playground_rect.y + 125
-            button_width = self.button_width
-            button_height = self.button_height
-            button_margin = self.button_margin
+        # Calculate the total width and height of the button grid
+        total_grid_width = 2 * button_width + button_margin
+        total_grid_height = 2 * button_height + button_margin
 
-        elif self.current_minigame == "Name To Structure":
-            # Adjust for Name to Structure (image-based buttons)
-            start_x = self.playground_rect.x + 350
-            start_y = self.playground_rect.y + 125
-            button_width = self.button_width
-            button_height = self.button_height
-            button_margin = self.button_margin
+        # Calculate starting x and y to center the grid in the playground
+        start_x = self.playground_rect.x + (self.playground_rect.width - total_grid_width) // 2
+        start_y = self.playground_rect.y + (self.playground_rect.height - total_grid_height) // 1.60
 
-        elif self.current_minigame == "Structure To Name":
-            # Text-based buttons for Structure to Name
-            start_x = self.playground_rect.x + 185  # More horizontal space
-            start_y = self.playground_rect.y + 400  # Lower on the screen
-            button_width = 475  # Wider to accommodate text
-            button_height = 100  # Shorter
-            button_margin = 30  # Smaller margin
+        if self.current_minigame == "Structure To Name":
+            button_width = int(475 * scale_factor)
+            button_height = int(100 * scale_factor)
+            button_margin = int(30 * scale_factor)
+            start_x = self.playground_rect.x + (self.playground_rect.width - (2*button_width)-button_margin) // 2
+            start_y = self.playground_rect.y + self.playground_rect.height * 0.6
 
-        # Only create button rects if all parameters are set
-        if all(v is not None for v in [start_x, start_y, button_width, button_height, button_margin]):
-            self.button_rects = [
-                pygame.Rect(start_x, start_y, button_width, button_height),
-                pygame.Rect(start_x + button_width + button_margin, start_y,
-                            button_width, button_height),
-                pygame.Rect(start_x, start_y + button_height + button_margin,
-                            button_width, button_height),
-                pygame.Rect(start_x + button_width + button_margin,
-                            start_y + button_height + button_margin,
-                            button_width, button_height)
-            ]
-        else:
-            print("Could not set up button rectangles")
-            self.button_rects = []
+
+        # Create button rectangles
+        self.button_rects = [
+            pygame.Rect(start_x, start_y, button_width, button_height),
+            pygame.Rect(start_x + button_width + button_margin, start_y, button_width, button_height),
+            pygame.Rect(start_x, start_y + button_height + button_margin, button_width, button_height),
+            pygame.Rect(start_x + button_width + button_margin, start_y + button_height + button_margin,
+                        button_width, button_height)
+        ]
+
+    def resize(self, new_width, new_height):
+        """
+        Comprehensive window resizing method
+        """
+        # Update width, height, and size
+        self.width = new_width
+        self.height = new_height
+        self.size = (new_width, new_height)
+
+        # Recalculate scaling factor
+        self.scale_factor = min(new_width / 1600, new_height / 1000)
+
+        # Update playground rect
+        playground_width = int(1200 * self.scale_factor)
+        playground_height = int(800 * self.scale_factor)
+
+        # Center the playground in the window
+        playground_left = (new_width - playground_width) // 2
+        playground_top = (new_height - playground_height) // 2
+
+        self.playground_rect = pygame.Rect(
+            playground_left,
+            playground_top,
+            playground_width,
+            playground_height
+        )
+
+        # Reinitialize UI elements with new scaling
+        self.initialize_ui_elements()
+        self.setup_button_rects()
+
+        # Rescale cached images to match new button sizes
+        if self.current_compounds:
+            self.rescale_cached_images()
+
     def check_hover(self, mouse_pos):
         # Check hover for game option buttons
         if self.time_left > 0:
@@ -227,6 +321,44 @@ class Time_Trial:
         # Check hover for game over button
         if self.time_left <= 0:
             self.game_over_button_hover = self.game_over_button_rect.collidepoint(mouse_pos)
+
+    def rescale_cached_images(self):
+        """
+        Rescale cached images based on current button dimensions
+        This method can be called during window resize events
+        """
+        if not self.current_compounds:
+            return
+
+        # Reset cached images
+        self.cached_images = []
+        for compound in self.current_compounds:
+            image_data = compound[3] if self.current_minigame == "Most Acidic" else compound[0]
+            if image_data:
+                pil_image = Image.open(BytesIO(image_data))
+
+                # Use the current button width and height for scaling
+                # Reduce image size to 80% of button size to ensure some padding
+                scale = min(
+                    (self.button_width * 0.8) / pil_image.width,
+                    (self.button_height * 0.8) / pil_image.height
+                )
+
+                new_size = (
+                    int(pil_image.width * scale),
+                    int(pil_image.height * scale)
+                )
+
+                pil_image = pil_image.resize(new_size, Image.Resampling.LANCZOS)
+
+                # Convert to pygame surface
+                mode = pil_image.mode
+                size = pil_image.size
+                data = pil_image.tobytes()
+                pygame_image = pygame.image.fromstring(data, size, mode)
+                self.cached_images.append(pygame_image)
+            else:
+                self.cached_images.append(None)
 
     def load_new_question(self):
         try:
@@ -300,16 +432,25 @@ class Time_Trial:
                 self.current_compounds = compounds
                 self.correct_answer = display_order.index(0)
 
-            # Cache images
+            # Cache images with dynamic scaling
             self.cached_images = []
             for compound in self.current_compounds:
                 image_data = compound[3] if self.current_minigame == "Most Acidic" else compound[0]
                 if image_data:
                     pil_image = Image.open(BytesIO(image_data))
-                    # Scale image
-                    img_width, img_height = pil_image.size
-                    scale = min(self.button_width / img_width, self.button_height / img_height)
-                    new_size = (int(img_width * scale * 0.8), int(img_height * scale * 0.8))
+
+                    # Use the current button width and height for scaling
+                    # Reduce image size to 80% of button size to ensure some padding
+                    scale = min(
+                        (self.button_width * 0.8) / pil_image.width,
+                        (self.button_height * 0.8) / pil_image.height
+                    )
+
+                    new_size = (
+                        int(pil_image.width * scale),
+                        int(pil_image.height * scale)
+                    )
+
                     pil_image = pil_image.resize(new_size, Image.Resampling.LANCZOS)
 
                     # Convert to pygame surface
@@ -334,18 +475,24 @@ class Time_Trial:
             return False
 
     def Most_Acidic(self, surface):
-        """Display the Most Acidic minigame"""
         if not self.current_compounds:
             if not self.load_new_question():
                 print("No Compounds")
                 return
 
+        # Draw timer first
+        self.draw_timer(surface)
+
+        # Calculate the position for instructions below the timer
+        timer_rect = self.font.render(f"Time Left: {self.time_left}s", True, (255, 255, 255)).get_rect()
+        timer_bottom = self.playground_rect.y + timer_rect.height + 10  # Add some padding
+
         # Draw instructions
-        instructions_font = pygame.font.SysFont('comicsansms', 36)
+        instructions_font = self.font
         instructions_text = "Select The Most Acidic Compound:"
         instructions_surface = instructions_font.render(instructions_text, True, (0, 0, 0))
         instructions_rect = instructions_surface.get_rect(
-            center=(self.playground_rect.centerx, self.playground_rect.y + 50))
+            center=(self.playground_rect.centerx, timer_bottom + 20))  # Position below timer
         surface.blit(instructions_surface, instructions_rect)
 
         # Draw score
@@ -393,18 +540,25 @@ class Time_Trial:
             # Time's up for this question
             self.selected_answer = -1  # Force incorrect
             self.handle_answer()
-    def Name_To_Structure(self, surface):
 
+    def Name_To_Structure(self, surface):
         if not self.current_compounds:
             print("No compounds available for Name to Structure")
             return
 
+        # Draw timer first
+        self.draw_timer(surface)
+
+        # Calculate the position for instructions below the timer
+        timer_rect = self.font.render(f"Time Left: {self.time_left}s", True, (255, 255, 255)).get_rect()
+        timer_bottom = self.playground_rect.y + timer_rect.height + 10  # Add some padding
+
         # Draw instructions
-        instructions_font = pygame.font.SysFont('comicsansms', 36)
-        instructions_text = "Match the following IUPAC name to its structure :"
+        instructions_font = self.font
+        instructions_text = "Match the following IUPAC name to its structure:"
         instructions_surface = instructions_font.render(instructions_text, True, (0, 0, 0))
         instructions_rect = instructions_surface.get_rect(
-            center=(self.playground_rect.centerx, self.playground_rect.y + 50))
+            center=(self.playground_rect.centerx, timer_bottom + 20))
         surface.blit(instructions_surface, instructions_rect)
 
         # Safely access the IUPAC name
@@ -412,7 +566,7 @@ class Time_Trial:
         compound_text = str(self.current_compounds[self.correct_answer][1])
         compound_surface = compound_font.render(compound_text, True, (0, 0, 0))
         compound_rect = compound_surface.get_rect(
-            center=(self.playground_rect.centerx, self.playground_rect.y + 85)
+            center=(self.playground_rect.centerx, instructions_rect.bottom + 20)
         )
         surface.blit(compound_surface, compound_rect)
 
@@ -450,12 +604,19 @@ class Time_Trial:
             print("No compounds available for Structure to Name")
             return
 
+        # Draw timer first
+        self.draw_timer(surface)
+
+        # Calculate the position for instructions below the timer
+        timer_rect = self.font.render(f"Time Left: {self.time_left}s", True, (255, 255, 255)).get_rect()
+        timer_bottom = self.playground_rect.y + timer_rect.height + 10  # Add some padding
+
         # Draw instructions
-        instructions_font = pygame.font.SysFont('comicsansms', 36)
-        instructions_text = "Select the IUPAC name for the given structure:"
+        instructions_font = self.font
+        instructions_text = "Match the structure to its IUPAC name:"
         instructions_surface = instructions_font.render(instructions_text, True, (0, 0, 0))
         instructions_rect = instructions_surface.get_rect(
-            center=(self.playground_rect.centerx, self.playground_rect.y + 50))
+            center=(self.playground_rect.centerx, timer_bottom + 20))  # Position below timer
         surface.blit(instructions_surface, instructions_rect)
 
         # Draw score
@@ -497,15 +658,58 @@ class Time_Trial:
             self.selected_answer = -1  # Force incorrect
             self.handle_answer()
 
-
-    def on_event(self, event):
-        if event.type == pygame.QUIT:
-            self._running = False
-        elif event.type == pygame.MOUSEBUTTONDOWN:
+    def on_event(self, event, app_instance):
+        # Handle button clicks for background toggle and return to menu
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            # Background toggle button
             if self.button_rect.collidepoint(event.pos):
-                self.toggle_background()
-            elif self.time_left > 0:  # Only handle clicks if the game is still running
-                self.handle_click(event.pos)
+                self.toggle_background(app_instance)
+
+            # Return to menu button
+            if self.return_to_menu_rect.collidepoint(event.pos):
+                return "return_to_menu"
+
+            # Game over button
+            if self.time_left <= 0 and self.game_over_button_rect.collidepoint(event.pos):
+                return "return_to_menu"
+        if event.type == pygame.VIDEORESIZE:
+            self.width, self.height = event.w, event.h
+            self.size = (self.width, self.height)
+            self._display_surf = pygame.display.set_mode(self.size,
+                                                         pygame.HWSURFACE | pygame.DOUBLEBUF | pygame.RESIZABLE)
+            self.update_layout()
+
+        return None
+
+    def update_playground_rect(self):
+        scale_factor = min(self.width / 1600, self.height / 1000)
+        playground_width = int(1200 * scale_factor)
+        playground_height = int(800 * scale_factor)
+
+        # Center the playground in the window
+        playground_left = (self.width - playground_width) // 2
+        playground_top = (self.height - playground_height) // 2
+
+        self.playground_rect = pygame.Rect(
+            playground_left,
+            playground_top,
+            playground_width,
+            playground_height
+        )
+
+    def update_layout(self):
+        # Recalculate scaling factor
+        scale_factor = min(self.width / 1600, self.height / 1000)
+
+        self.update_playground_rect()
+
+        # Update other layout elements if needed
+        button_width = int(100 * scale_factor)
+        button_height = int(50 * scale_factor)
+        button_x = self.width - button_width
+        button_y = 0  # Keep at the top-right corner
+
+        self.button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
 
     def handle_answer(self):
         """Process the selected answer and update game state"""
@@ -541,15 +745,22 @@ class Time_Trial:
         # Draw the button with smooth corners (rounded rectangle)
         button_color = (169, 169, 169) if self.dark_mode else (230, 230, 230)
         pygame.draw.rect(surface, button_color, self.button_rect, border_radius=10)  # Rounded corners
+        music_button_color = (169, 169, 169) if self.dark_mode else (230, 230, 230)
+        pygame.draw.rect(surface, music_button_color, self.music_rect, border_radius=10)
 
         button_text = "Light" if self.dark_mode else "Lighter"
         text_color = (255, 255, 255) if self.dark_mode else (0, 0, 0)
-
-        # Render the button text in white and position it in the center of the button
         button_font = pygame.font.Font('freesansbold.ttf', 20)
         button_text_surface = button_font.render(button_text, True, text_color)
         button_text_rect = button_text_surface.get_rect(center=self.button_rect.center)
         surface.blit(button_text_surface, button_text_rect)
+
+        music_button_text = "Playing" if self.music_play else "Paused"
+        text_color = (255, 255, 255) if self.dark_mode else (0, 0, 0)
+        music_button_font = pygame.font.Font('freesansbold.ttf', 20)
+        music_button_text_surface = music_button_font.render(music_button_text, True, text_color)
+        music_button_text_rect = music_button_text_surface.get_rect(center = self.music_rect.center)
+        surface.blit(music_button_text_surface, music_button_text_rect)
 
         # Render the return to menu button
         menu_color = (140, 140, 140) if self.menu_hover_state else (169, 169, 169) if self.dark_mode else (
@@ -602,6 +813,17 @@ class Time_Trial:
     def on_event(self, event):
         if event.type == pygame.QUIT:
             self._running = False
+
+        if event.type == pygame.VIDEORESIZE:
+            new_width, new_height = event.w, event.h
+            self.resize(new_width, new_height)
+
+            # Optional: Recreate the display surface with new size
+            self._display_surf = pygame.display.set_mode(
+                (new_width, new_height),
+                pygame.HWSURFACE | pygame.DOUBLEBUF | pygame.RESIZABLE
+            )
+
         elif event.type == pygame.MOUSEMOTION:
             # Check hover states for buttons
             self.check_hover(event.pos)
@@ -610,6 +832,9 @@ class Time_Trial:
             if self.time_left <= 0 and self.game_over_button_rect.collidepoint(event.pos):
                 self.return_to_menu = True
                 self._running = False
+            # Toggle music
+            if self.music_rect.collidepoint(event.pos):
+                self.pause_music()
             # Dark mode toggle
             elif self.button_rect.collidepoint(event.pos):
                 self.toggle_background()
@@ -621,4 +846,3 @@ class Time_Trial:
                 self._running = False
             elif self.time_left > 0:  # Only handle clicks if the game is still running
                 self.handle_click(event.pos)
-

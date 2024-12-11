@@ -210,6 +210,22 @@ class App:
         # Calculate scaling factors based on the current size and original dimensions
         return self._display_surf.get_width() / 1600, self._display_surf.get_height() / 1000
 
+    def update_playground_rect(self):
+        scale_factor = min(self.width / 1600, self.height / 1000)
+        playground_width = int(1200 * scale_factor)
+        playground_height = int(800 * scale_factor)
+
+        # Center the playground in the window
+        playground_left = (self.width - playground_width) // 2
+        playground_top = (self.height - playground_height) // 2
+
+        self.playground_rect = pygame.Rect(
+            playground_left,
+            playground_top,
+            playground_width,
+            playground_height
+        )
+
     def on_event(self, event):
         if event.type == pygame.QUIT:
             self._running = False
@@ -235,7 +251,15 @@ class App:
                     self.current_screen = "survival"
                 elif self.gamemode2.is_clicked(event.pos):
                     self.current_screen = "time_trial"
-                    self.time_trial = Time_Trial()
+                    self.time_trial = Time_Trial(
+                        width=self.width,
+                        height=self.height,
+                        playground_rect=self.playground_rect,
+                        base_path=self.base_path,
+                        current_background=self.current_background,
+                        dark_mode=self.dark_mode,
+                        music_play= self.music_play,
+                    )
                     self.time_trial.start_timer()
 
             # Handle return to menu from time trial
@@ -259,11 +283,28 @@ class App:
 
         # Delegate events to Time_Trial mode if active
         if self.current_screen == "time_trial" and self.time_trial:
-            self.time_trial.on_event(event)
+            event_result = self.time_trial.on_event(event)
+            if event_result == "return_to_menu":
+                self.current_screen = "playground"
+                self.time_trial = None
 
     def update_layout(self):
         # Recalculate scaling factor
         scale_factor = min(self.width / 1600, self.height / 1000)
+
+        self.update_playground_rect()
+
+        # Update other layout elements if needed
+        button_width = int(100 * scale_factor)
+        button_height = int(50 * scale_factor)
+        button_x = self.width - button_width
+        button_y = 0  # Keep at the top-right corner
+
+        music_x = self.width - button_width
+        music_y = button_height  # Positioned below the button
+
+        self.button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
+        self.music_rect = pygame.Rect(music_x, music_y, button_width, button_height)
 
         # Reposition and rescale buttons
         self.gamemode1.x = int(self.width * 0.35)
@@ -284,25 +325,30 @@ class App:
             # Set the background
             self._display_surf.blit(self.current_background.image, self.current_background.rect)
 
-            # Draw the button with smooth corners (rounded rectangle)
-            button_color = (169, 169, 169) if self.dark_mode else (230, 230, 230)
-            pygame.draw.rect(self._display_surf, button_color, self.button_rect, border_radius=10)  # Rounded corners
+            scale_factor = min(self.width / 1600, self.height / 1000)
+            font_size = max(10, int(20 * scale_factor))  # Ensure a minimum font size of 10
 
+            # Button properties
+            button_color = (169, 169, 169) if self.dark_mode else (230, 230, 230)
+            pygame.draw.rect(self._display_surf, button_color, self.button_rect,
+                             border_radius=int(10 * scale_factor))  # Scaled corners
+
+            # Button text properties
             button_text = "Lighter" if not self.dark_mode else "Light"
             text_color = (255, 255, 255) if self.dark_mode else (0, 0, 0)
-
-            # Render the button text in white and position it in the center of the button
-            button_font = pygame.font.Font('freesansbold.ttf', 20)
+            button_font = pygame.font.Font('freesansbold.ttf', font_size)  # Scaled font size
             button_text_surface = button_font.render(button_text, True, text_color)
             button_text_rect = button_text_surface.get_rect(center=self.button_rect.center)
             self._display_surf.blit(button_text_surface, button_text_rect)
 
+            # Music button properties
             music_button_color = (169, 169, 169) if self.dark_mode else (230, 230, 230)
-            pygame.draw.rect(self._display_surf, button_color, self.music_rect, border_radius=10)  # Rounded corners
+            pygame.draw.rect(self._display_surf, music_button_color, self.music_rect,
+                             border_radius=int(10 * scale_factor))  # Scaled corners
 
+            # Music button text properties
             music_text = "Paused" if not self.music_play else "Playing"
-
-            music_font = pygame.font.Font('freesansbold.ttf', 20)
+            music_font = pygame.font.Font('freesansbold.ttf', font_size)  # Reuse scaled font size
             music_text_surface = music_font.render(music_text, True, text_color)
             music_text_rect = music_text_surface.get_rect(center=self.music_rect.center)
             self._display_surf.blit(music_text_surface, music_text_rect)
