@@ -91,8 +91,8 @@ class App:
         self.dark_mode = False
 
         # Dynamically position button
-        self.button_rect = pygame.Rect(self.width - 100, 0, 100, 50)
-        self.music_rect = pygame.Rect(self.width - 100, 50, 100, 50)
+        self.button_rect = pygame.Rect(self.width - scale_factor*100, 0, scale_factor*100, scale_factor*50)
+        self.music_rect = pygame.Rect(self.width - scale_factor*100, scale_factor*50, scale_factor*100, scale_factor*50)
         self.music_play = True
 
         # Playground scaling with centering
@@ -258,6 +258,8 @@ class App:
                         current_background=self.current_background,
                         dark_mode=self.dark_mode,
                         music_play= self.music_play,
+                        music_rect=self.music_rect,
+                        button_rect=self.button_rect,
                     )
                 elif self.gamemode2.is_clicked(event.pos):
                     self.current_screen = "time_trial"
@@ -269,6 +271,8 @@ class App:
                         current_background=self.current_background,
                         dark_mode=self.dark_mode,
                         music_play= self.music_play,
+                        music_rect=self.music_rect,
+                        button_rect=self.button_rect,
                     )
                     self.time_trial.start_timer()
 

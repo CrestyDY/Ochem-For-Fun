@@ -9,7 +9,7 @@ from io import BytesIO
 import math
 
 class Time_Trial:
-    def __init__(self, width, height, playground_rect, base_path, current_background, dark_mode, music_play):
+    def __init__(self, width, height, playground_rect, base_path, current_background, dark_mode, music_play,music_rect,button_rect):
         # Playground rect from App
         self.playground_rect = playground_rect
         self.scale_factor = min(width / 1600, height / 1000)
@@ -74,8 +74,8 @@ class Time_Trial:
         # Initialize UI elements with initial scaling
 
         # Button rects based on App's width
-        self.button_rect = pygame.Rect(width - 100, 0, 100, 50)
-        self.music_rect = pygame.Rect(width - 100, 50, 100, 50)
+        self.button_rect = button_rect
+        self.music_rect = music_rect
 
         # Return to menu button
         self.return_to_menu_rect = pygame.Rect(
@@ -371,16 +371,17 @@ class Time_Trial:
                 pil_image = Image.open(BytesIO(image_data))
 
                 # Use the current button width and height for scaling
-                # Reduce image size to 80% of button size to ensure some padding
+                print("Resizing occured. Button width: ", self.button_width, "\n self.button_height: ", self.button_height)
                 scale = min(
-                    (self.button_width * 0.8) / pil_image.width,
-                    (self.button_height * 0.8) / pil_image.height
+                    (self.button_width * 0.7) / pil_image.width,
+                    (self.button_height * 0.7) / pil_image.height
                 )
 
                 new_size = (
                     int(pil_image.width * scale),
                     int(pil_image.height * scale)
                 )
+                print("New size: ", new_size)
 
                 pil_image = pil_image.resize(new_size, Image.Resampling.LANCZOS)
 
@@ -475,8 +476,8 @@ class Time_Trial:
                     # Use the current button width and height for scaling
                     # Reduce image size to 80% of button size to ensure some padding
                     scale = min(
-                        (self.button_width * 0.8) / pil_image.width,
-                        (self.button_height * 0.8) / pil_image.height
+                        (self.button_width * 0.7) / pil_image.width,
+                        (self.button_height * 0.7) / pil_image.height
                     )
 
                     new_size = (
@@ -637,19 +638,21 @@ class Time_Trial:
             print("No compounds available for Structure to Name")
             return
 
-        # Draw timer first
-        self.draw_timer(surface)
-
-        # Calculate the position for instructions below the timer
-        timer_rect = self.font.render(f"Time Left: {self.time_left}s", True, (255, 255, 255)).get_rect()
-        timer_bottom = self.playground_rect.y + timer_rect.height + 10  # Add some padding
+        # Calculate the actual position of the timer
+        timer_text = f"Time Left: {self.time_left}s"
+        timer_surface = self.font.render(timer_text, True, (255, 255, 255))
+        timer_rect = timer_surface.get_rect(
+            topleft=(self.playground_rect.x + 20, self.playground_rect.y + 20)
+        )
+        timer_bottom = timer_rect.bottom + int(self.scale_factor * 10)  # Add some padding
 
         # Draw instructions
-        instructions_font = self.font
         instructions_text = "Match the structure to its IUPAC name:"
-        instructions_surface = instructions_font.render(instructions_text, True, (0, 0, 0))
+        instructions_surface = self.font.render(instructions_text, True, (0, 0, 0))
         instructions_rect = instructions_surface.get_rect(
-            center=(self.playground_rect.centerx, timer_bottom + 20))  # Position below timer
+            center=(self.playground_rect.centerx, timer_bottom + int(self.scale_factor * 40))
+            # Increase vertical offset
+        )
         surface.blit(instructions_surface, instructions_rect)
 
         # Draw score
@@ -680,11 +683,13 @@ class Time_Trial:
                 )
                 surface.blit(line_surface, line_rect)
 
+        image_y = instructions_rect.bottom
+
         # Draw the structure to identify
         if self.cached_images[self.correct_answer]:
             structure_image = self.cached_images[self.correct_answer]
             image_rect = structure_image.get_rect(
-                center=(self.playground_rect.centerx, self.playground_rect.y + 225)
+                center=(self.playground_rect.centerx, instructions_rect.centery + structure_image.get_height() // 2 + self.scale_factor * 40)
             )
             surface.blit(structure_image, image_rect)
 
@@ -745,7 +750,7 @@ class Time_Trial:
 
         # Update other layout elements if needed
         button_width = int(100 * scale_factor)
-        button_height = int(50 * scale_factor)
+        button_height = int(1000 * scale_factor)
         button_x = self.width - button_width
         button_y = 0  # Keep at the top-right corner
 
@@ -783,6 +788,8 @@ class Time_Trial:
         surface.blit(playground_surface, self.playground_rect)
 
         # Draw the button with smooth corners (rounded rectangle)
+        scale_factor = min(self.width / 1600, self.height / 1000)
+        font_size = max(10, int(20 * scale_factor))
         button_color = (169, 169, 169) if self.dark_mode else (230, 230, 230)
         pygame.draw.rect(surface, button_color, self.button_rect, border_radius=10)  # Rounded corners
         music_button_color = (169, 169, 169) if self.dark_mode else (230, 230, 230)
@@ -790,14 +797,14 @@ class Time_Trial:
 
         button_text = "Light" if self.dark_mode else "Lighter"
         text_color = (255, 255, 255) if self.dark_mode else (0, 0, 0)
-        button_font = pygame.font.Font('freesansbold.ttf', 20)
+        button_font = pygame.font.Font('freesansbold.ttf', font_size)
         button_text_surface = button_font.render(button_text, True, text_color)
         button_text_rect = button_text_surface.get_rect(center=self.button_rect.center)
         surface.blit(button_text_surface, button_text_rect)
 
         music_button_text = "Playing" if self.music_play else "Paused"
         text_color = (255, 255, 255) if self.dark_mode else (0, 0, 0)
-        music_button_font = pygame.font.Font('freesansbold.ttf', 20)
+        music_button_font = pygame.font.Font('freesansbold.ttf', font_size)
         music_button_text_surface = music_button_font.render(music_button_text, True, text_color)
         music_button_text_rect = music_button_text_surface.get_rect(center = self.music_rect.center)
         surface.blit(music_button_text_surface, music_button_text_rect)
