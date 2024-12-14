@@ -9,7 +9,7 @@ from io import BytesIO
 import math
 
 class Time_Trial:
-    def __init__(self, width, height, playground_rect, base_path, current_background, dark_mode, music_play,music_rect,button_rect):
+    def __init__(self, width, height, playground_rect, base_path, current_background, dark_mode, music_play, music_rect,button_rect):
         # Playground rect from App
         self.playground_rect = playground_rect
         self.scale_factor = min(width / 1600, height / 1000)
@@ -76,6 +76,8 @@ class Time_Trial:
         # Button rects based on App's width
         self.button_rect = button_rect
         self.music_rect = music_rect
+        self.button_hovered = False
+        self.music_hovered = False
 
         # Return to menu button
         self.return_to_menu_rect = pygame.Rect(
@@ -703,28 +705,28 @@ class Time_Trial:
             self.selected_answer = -1  # Force incorrect
             self.handle_answer()
 
-    def on_event(self, event, app_instance):
-        # Handle button clicks for background toggle and return to menu
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            # Background toggle button
-            if self.button_rect.collidepoint(event.pos):
-                self.toggle_background(app_instance)
-
-            # Return to menu button
-            if self.return_to_menu_rect.collidepoint(event.pos):
-                return "return_to_menu"
-
-            # Game over button
-            if self.time_left <= 0 and self.game_over_button_rect.collidepoint(event.pos):
-                return "return_to_menu"
-        if event.type == pygame.VIDEORESIZE:
-            self.width, self.height = event.w, event.h
-            self.size = (self.width, self.height)
-            self._display_surf = pygame.display.set_mode(self.size,
-                                                         pygame.HWSURFACE | pygame.DOUBLEBUF | pygame.RESIZABLE)
-            self.update_layout()
-
-        return None
+    # def ui_changes(self, event, app_instance):
+    #     # Handle button clicks for background toggle and return to menu
+    #     if event.type == pygame.MOUSEBUTTONDOWN:
+    #         # Background toggle button
+    #         if self.button_rect.collidepoint(event.pos):
+    #             self.toggle_background(app_instance)
+    #
+    #         # Return to menu button
+    #         if self.return_to_menu_rect.collidepoint(event.pos):
+    #             return "return_to_menu"
+    #
+    #         # Game over button
+    #         if self.time_left <= 0 and self.game_over_button_rect.collidepoint(event.pos):
+    #             return "return_to_menu"
+    #     if event.type == pygame.VIDEORESIZE:
+    #         self.width, self.height = event.w, event.h
+    #         self.size = (self.width, self.height)
+    #         self._display_surf = pygame.display.set_mode(self.size,
+    #                                                      pygame.HWSURFACE | pygame.DOUBLEBUF | pygame.RESIZABLE)
+    #         self.update_layout()
+    #
+    #     return None
 
     def update_playground_rect(self):
         scale_factor = min(self.width / 1600, self.height / 1000)
@@ -790,9 +792,9 @@ class Time_Trial:
         # Draw the button with smooth corners (rounded rectangle)
         scale_factor = min(self.width / 1600, self.height / 1000)
         font_size = max(10, int(20 * scale_factor))
-        button_color = (169, 169, 169) if self.dark_mode else (230, 230, 230)
+        button_color = (100,100,100) if self.button_hovered else (169, 169, 169) if self.dark_mode else (230, 230, 230)
         pygame.draw.rect(surface, button_color, self.button_rect, border_radius=10)  # Rounded corners
-        music_button_color = (169, 169, 169) if self.dark_mode else (230, 230, 230)
+        music_button_color = (100,100,100) if self.music_hovered else (169, 169, 169) if self.dark_mode else (230, 230, 230)
         pygame.draw.rect(surface, music_button_color, self.music_rect, border_radius=10)
 
         button_text = "Light" if self.dark_mode else "Lighter"
@@ -813,7 +815,7 @@ class Time_Trial:
         menu_color = (140, 140, 140) if self.menu_hover_state else (169, 169, 169) if self.dark_mode else (
         230, 230, 230)
         pygame.draw.rect(surface, menu_color, self.return_to_menu_rect, border_radius=10)
-        menu_font = pygame.font.SysFont('comicsansms', 20)
+        menu_font = pygame.font.SysFont('comicsansms', font_size)
         menu_text = "Menu"
         menu_surface = menu_font.render(menu_text, True, text_color)
         menu_rect = menu_surface.get_rect(center=self.return_to_menu_rect.center)
@@ -874,6 +876,8 @@ class Time_Trial:
         elif event.type == pygame.MOUSEMOTION:
             # Check hover states for buttons
             self.check_hover(event.pos)
+            self.button_hovered = self.button_rect.collidepoint(event.pos)
+            self.music_hovered = self.music_rect.collidepoint(event.pos)
         elif event.type == pygame.MOUSEBUTTONDOWN:
             # Game over state button
             if self.time_left <= 0 and self.game_over_button_rect.collidepoint(event.pos):

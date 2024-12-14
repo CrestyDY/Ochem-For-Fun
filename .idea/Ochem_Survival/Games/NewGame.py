@@ -10,11 +10,9 @@ import os
 class App:
     class HexButton:
         def __init__(self, x, y, base_size, scale_factor, color, hover_color, text, text_color=(0, 0, 0)):
-            # Scale the size based on the window scaling factor
             self.base_size = base_size
             self.size = int(base_size * scale_factor)
 
-            # Dynamically position the button based on scaling
             self.x = x
             self.y = y
 
@@ -22,8 +20,8 @@ class App:
             self.hover_color = hover_color
             self.text = text
             self.text_color = text_color
-            self.is_hovered = False  # Track if the mouse is over the button
-            self.points = []  # Store hexagon points
+            self.is_hovered = False
+            self.points = []
 
         def calculate_hex_points(self, size_adjustment=0):
             # Calculates the six points of a hexagon with an optional size adjustment for border
@@ -94,6 +92,8 @@ class App:
         self.button_rect = pygame.Rect(self.width - scale_factor*100, 0, scale_factor*100, scale_factor*50)
         self.music_rect = pygame.Rect(self.width - scale_factor*100, scale_factor*50, scale_factor*100, scale_factor*50)
         self.music_play = True
+        self.button_hovered = False
+        self.music_hovered = False
 
         # Playground scaling with centering
         playground_width = int(1200 * scale_factor)
@@ -301,6 +301,8 @@ class App:
         if event.type == pygame.MOUSEMOTION and self.current_screen == "playground":
             self.gamemode1.check_hover(event.pos)
             self.gamemode2.check_hover(event.pos)
+            self.button_hovered = self.button_rect.collidepoint(event.pos)
+            self.music_hovered = self.music_rect.collidepoint(event.pos)
 
         # Delegate events to Time_Trial mode if active
         if self.current_screen == "time_trial" and self.time_trial:
@@ -350,9 +352,8 @@ class App:
             font_size = max(10, int(20 * scale_factor))  # Ensure a minimum font size of 10
 
             # Button properties
-            button_color = (169, 169, 169) if self.dark_mode else (230, 230, 230)
-            pygame.draw.rect(self._display_surf, button_color, self.button_rect,
-                             border_radius=int(10 * scale_factor))  # Scaled corners
+            button_color = (100,100,100) if self.button_hovered else (169, 169, 169) if self.dark_mode else (230, 230, 230)
+            pygame.draw.rect(self._display_surf, button_color, self.button_rect, border_radius=int(10 * scale_factor))  # Scaled corners
 
             # Button text properties
             button_text = "Lighter" if not self.dark_mode else "Light"
@@ -363,7 +364,7 @@ class App:
             self._display_surf.blit(button_text_surface, button_text_rect)
 
             # Music button properties
-            music_button_color = (169, 169, 169) if self.dark_mode else (230, 230, 230)
+            music_button_color = (100,100,100) if self.music_hovered else (169, 169, 169) if self.dark_mode else (230, 230, 230)
             pygame.draw.rect(self._display_surf, music_button_color, self.music_rect,
                              border_radius=int(10 * scale_factor))  # Scaled corners
 
@@ -388,7 +389,7 @@ class App:
 
             # Render the title text
             title_text = "WELCOME TO OCHEM SURVIVAL !"
-            text_color = (0, 0, 0) if self.current_background == self.background_dark else (255, 255, 255)
+            text_color = (0, 0, 0)
             title_surface = title_font.render(title_text, True, text_color)
 
             # Get the rectangle for the text and center it horizontally
@@ -400,7 +401,7 @@ class App:
             # Subtitle text
             subtitle_font = pygame.font.SysFont('comicsansms', int(self.base_subtitle_font_size * height_scale))
             subtitle_text = "Are You Ready To Take On This Challenge ?"
-            subtitle_surface = subtitle_font.render(subtitle_text, True, (0, 0, 0) if self.current_background == self.background_dark else (255,255,255))
+            subtitle_surface = subtitle_font.render(subtitle_text, True, (0, 0, 0) )
             subtitle_rect = subtitle_surface.get_rect()
             subtitle_rect.centerx = self.playground_rect.centerx
             subtitle_rect.y = int(self.playground_rect.y + self.base_subtitle_offset[1] * height_scale)
@@ -409,7 +410,7 @@ class App:
             # Sub-subtitle text
             subsubtitle_font = pygame.font.SysFont('comicsansms', int(self.base_subsubtitle_font_size * height_scale))
             subsubtitle_text = "Select a Gamemode"
-            subsubtitle_surface = subsubtitle_font.render(subsubtitle_text, True, (0, 0, 0) if self.current_background == self.background_dark else (255,255,255))
+            subsubtitle_surface = subsubtitle_font.render(subsubtitle_text, True, (0, 0, 0))
             subsubtitle_rect = subsubtitle_surface.get_rect()
             subsubtitle_rect.centerx = self.playground_rect.centerx
             subsubtitle_rect.y = int(self.playground_rect.y + self.base_subsubtitle_offset[1]*height_scale)
@@ -417,24 +418,32 @@ class App:
             # Display Gamemode buttons
             self.gamemode1.draw(self._display_surf)
 
-            high_score_font = pygame.font.SysFont('comicsansms', 16)
+            high_score_font = pygame.font.SysFont('comicsansms', max(int(self.gamemode2.size / 6), 10))
             self.gamemode2.draw(self._display_surf)
-            button_center_x = self.gamemode2.x
-            button_center_y = self.gamemode2.y
 
-            # Check if we have a high score (loaded during initialization)
+            # If high score exists, render it within the button
             if hasattr(self, 'time_trial_high_score') and self.time_trial_high_score is not None:
-                # Render high score text
-                high_score_text = f"High Score: {self.time_trial_high_score}"
-                high_score_surface = high_score_font.render(high_score_text, True, (0, 0, 0))
+                # Prepare high score text
+                high_score_text = f"High Score:"
+                high_score_value_text = f"{self.time_trial_high_score}"
 
-                # Position the high score text below the button
+                # Render high score text
+                high_score_surface = high_score_font.render(high_score_text, True, (0, 0, 0))
+                high_score_value_surface = high_score_font.render(high_score_value_text, True, (0, 0, 0))
+
+                # Calculate positions to center the text within the hexagon
                 high_score_rect = high_score_surface.get_rect(
-                    centerx=button_center_x,
-                    top=button_center_y + self.gamemode2.size + 10  # 10 pixels below the button
+                    centerx=self.gamemode2.x,
+                    centery=self.gamemode2.y + self.gamemode2.size // 3  # Position below the "TIME TRIAL" text
+                )
+                high_score_value_rect = high_score_value_surface.get_rect(
+                    centerx=self.gamemode2.x,
+                    centery=self.gamemode2.y + self.gamemode2.size // 3 + high_score_font.get_height()
                 )
 
+                # Blit the high score text
                 self._display_surf.blit(high_score_surface, high_score_rect)
+                self._display_surf.blit(high_score_value_surface, high_score_value_rect)
 
         elif self.current_screen == "time_trial" and self.time_trial:
             self.time_trial.run_once(self._display_surf)

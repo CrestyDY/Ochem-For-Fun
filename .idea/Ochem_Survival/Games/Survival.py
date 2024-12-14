@@ -8,7 +8,7 @@ from PIL import Image
 from io import BytesIO
 
 class Survival:
-    def __init__(self, width, height, playground_rect, base_path, current_background, dark_mode, music_play):
+    def __init__(self, width, height, playground_rect, base_path, current_background, dark_mode, music_play, music_rect, button_rect):
         # Playground rect from App
         self.playground_rect = playground_rect
         self.scale_factor = min(width / 1600, height / 1000)
@@ -88,9 +88,14 @@ class Survival:
 
 
         self.remaining_lives = 3
+        self.full_heart = pygame.image.load(self.get_image_path('full_heart.png')).convert_alpha()
 
     def get_image_path(self, filename):
         return os.path.join(self.base_path, 'images', filename)
+
+    def draw_hearts(self, surface):
+        for i in range(self.remaining_lives):
+            surface.blit(self.full_heart, (i*50,45))
 
     def initialize_ui_elements(self):
         """
@@ -134,9 +139,10 @@ class Survival:
         self.small_font = pygame.font.SysFont('comicsansms', small_font_size)
 
     def Wrong_answer(self, surface):
-        if self.remaining_lives > 1:
+        if self.remaining_lives > 0:
             self.remaining_lives -= 1
-        elif self.remaining_lives == 1:
+
+        if self.remaining_lives <= 0:
             self.draw_game_over(surface)
 
     def select_random_minigame(self):
@@ -404,10 +410,7 @@ class Survival:
             print("Loading new question due to feedback duration")
             self.select_random_minigame()
             self.load_new_question()
-        elif not self.feedback_displayed:
-            # Time's up for this question
-            self.selected_answer = -1  # Force incorrect
-            self.handle_answer()
+
     def Name_To_Structure(self, surface):
 
         if not self.current_compounds:
@@ -453,10 +456,6 @@ class Survival:
         if self.feedback_displayed:
             self.select_random_minigame()
             self.load_new_question()
-        elif not self.feedback_displayed:
-            # Time's up for this question
-            self.selected_answer = -1  # Force incorrect
-            self.handle_answer()
 
     def Structure_To_Name(self, surface):
         if not self.current_compounds:
@@ -503,10 +502,6 @@ class Survival:
         if self.feedback_displayed:
             self.select_random_minigame()
             self.load_new_question()
-        elif not self.feedback_displayed:
-            # Time's up for this question
-            self.selected_answer = -1  # Force incorrect
-            self.handle_answer()
 
     def on_event(self, event):
         if event.type == pygame.QUIT:
@@ -559,6 +554,8 @@ class Survival:
         button_text_surface = button_font.render(button_text, True, text_color)
         button_text_rect = button_text_surface.get_rect(center=self.button_rect.center)
         surface.blit(button_text_surface, button_text_rect)
+
+        self.draw_hearts(playground_surface)
 
         if self.remaining_lives > 0:
 
