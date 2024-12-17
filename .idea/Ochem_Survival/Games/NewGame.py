@@ -156,7 +156,7 @@ class App:
 
         self.time_trial_high_score = None
         self.time_trial = None
-
+        self.survival_high_score = None
         self.survival = None
 
     def get_image_path(self, filename):
@@ -186,6 +186,14 @@ class App:
         except (FileNotFoundError, ValueError):
             print("Error finding file")
             self.time_trial_high_score = 0
+
+        try:
+            with open("Survival_High_Scores.txt", "r") as file:
+                print("Succesfully read file")
+                self.survival_high_score = int(file.read().strip())
+        except (FileNotFoundError, ValueError):
+            print("Error finding file")
+            self.survival_high_score = 0
 
         pygame.display.flip()
         self._running = True
@@ -293,7 +301,7 @@ class App:
                 if self.survival.return_to_menu_rect.collidepoint(event.pos):
                     self.current_screen = "playground"
                     self.survival = None
-                elif self.survival.remaining_lives == 0 and self.survival.game_over_button_rect.collidepoint(event.pos):
+                elif self.survival.lives == 0 and self.survival.game_over_button_rect.collidepoint(event.pos):
                     self.current_screen = "playground"
                     self.survival = None
 
@@ -310,6 +318,11 @@ class App:
             if event_result == "return_to_menu":
                 self.current_screen = "playground"
                 self.time_trial = None
+        if self.current_screen == "survival" and self.survival:
+            event_result = self.survival.on_event(event)
+            if event_result == "return_to_menu":
+                self.current_screen = "playground"
+                self.survival = None
 
     def update_layout(self):
         # Recalculate scaling factor
@@ -337,6 +350,7 @@ class App:
         self.gamemode2.x = int(self.width * 0.65)
         self.gamemode2.y = int(self.height * 0.5)
         self.gamemode2.size = int(self.gamemode2.base_size * scale_factor)
+
     def on_loop(self):
         if self.current_screen == "time_trial" and self.time_trial:
             # Update the time trial timer
@@ -424,26 +438,50 @@ class App:
             # If high score exists, render it within the button
             if hasattr(self, 'time_trial_high_score') and self.time_trial_high_score is not None:
                 # Prepare high score text
-                high_score_text = f"High Score:"
-                high_score_value_text = f"{self.time_trial_high_score}"
+                time_trial_score_text = f"High Score:"
+                time_trial_score_value_text = f"{self.time_trial_high_score}"
 
                 # Render high score text
-                high_score_surface = high_score_font.render(high_score_text, True, (0, 0, 0))
-                high_score_value_surface = high_score_font.render(high_score_value_text, True, (0, 0, 0))
+                time_trial_score_surface = high_score_font.render(time_trial_score_text, True, (0, 0, 0))
+                time_trial_score_value_surface = high_score_font.render(time_trial_score_value_text, True, (0, 0, 0))
 
                 # Calculate positions to center the text within the hexagon
-                high_score_rect = high_score_surface.get_rect(
+                time_trial_score_rect = time_trial_score_surface.get_rect(
                     centerx=self.gamemode2.x,
                     centery=self.gamemode2.y + self.gamemode2.size // 3  # Position below the "TIME TRIAL" text
                 )
-                high_score_value_rect = high_score_value_surface.get_rect(
+                time_trial_score_value_rect = time_trial_score_value_surface.get_rect(
                     centerx=self.gamemode2.x,
                     centery=self.gamemode2.y + self.gamemode2.size // 3 + high_score_font.get_height()
                 )
 
                 # Blit the high score text
-                self._display_surf.blit(high_score_surface, high_score_rect)
-                self._display_surf.blit(high_score_value_surface, high_score_value_rect)
+                self._display_surf.blit(time_trial_score_surface, time_trial_score_rect)
+                self._display_surf.blit(time_trial_score_value_surface, time_trial_score_value_rect)
+
+            # If high score exists, render it within the button
+            if hasattr(self, 'survival_high_score') and self.survival_high_score is not None:
+                # Prepare high score text
+                survival_score_text = f"High Score:"
+                survival_score_value_text = f"{self.survival_high_score}"
+
+                # Render high score text
+                survival_score_surface = high_score_font.render(survival_score_text, True, (0, 0, 0))
+                survival_score_value_surface = high_score_font.render(survival_score_value_text, True, (0, 0, 0))
+
+                # Calculate positions to center the text within the hexagon
+                survival_score_rect = survival_score_surface.get_rect(
+                    centerx=self.gamemode1.x,
+                    centery=self.gamemode1.y + self.gamemode1.size // 3  # Position below the "TIME TRIAL" text
+                )
+                survival_score_value_rect = survival_score_value_surface.get_rect(
+                    centerx=self.gamemode1.x,
+                    centery=self.gamemode1.y + self.gamemode1.size // 3 + high_score_font.get_height()
+                )
+
+                # Blit the high score text
+                self._display_surf.blit(survival_score_surface, survival_score_rect)
+                self._display_surf.blit(survival_score_value_surface, survival_score_value_rect)
 
         elif self.current_screen == "time_trial" and self.time_trial:
             self.time_trial.run_once(self._display_surf)
