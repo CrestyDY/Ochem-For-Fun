@@ -3,6 +3,7 @@ import background
 from pygame.locals import *
 from Time_Trial import Time_Trial
 from Survival import Survival
+from Database_Search import Database_Search
 import math
 import sys
 import os
@@ -159,6 +160,17 @@ class App:
         self.survival_high_score = None
         self.survival = None
 
+        scale_factor = min(self.width / 1600, self.height / 1000)
+        button_width = int(180 * scale_factor)
+        button_height = int(40 * scale_factor)
+        self.database_button_rect = pygame.Rect(
+            10,  # Left margin
+            10,  # Bottom margin
+            button_width,
+            button_height
+        )
+        self.database_button_hovered = False
+
     def get_image_path(self, filename):
         return os.path.join(self.base_path, 'images', filename)
 
@@ -256,6 +268,19 @@ class App:
 
             # Handle gamemode button clicks only in playground screen
             if self.current_screen == "playground":
+                if self.database_button_rect.collidepoint(event.pos):
+                    self.current_screen = "database_search"
+                    self.database_search = Database_Search(
+                        width=self.width,
+                        height=self.height,
+                        playground_rect=self.playground_rect,
+                        base_path=self.base_path,
+                        current_background=self.current_background,
+                        dark_mode=self.dark_mode,
+                        music_play=self.music_play,
+                        music_rect=self.music_rect,
+                        button_rect=self.button_rect,
+                    )
                 if self.gamemode1.is_clicked(event.pos):
                     self.current_screen = "survival"
                     self.survival = Survival(
@@ -286,13 +311,9 @@ class App:
 
             # Handle return to menu from time trial
             if self.current_screen == "time_trial" and self.time_trial:
-                # Check for return to menu during game
                 if self.time_trial.return_to_menu_rect.collidepoint(event.pos):
-                    # Return to playground screen
                     self.current_screen = "playground"
                     self.time_trial = None
-
-                # Existing game over button logic
                 elif self.time_trial.time_left <= 0 and self.time_trial.game_over_button_rect.collidepoint(event.pos):
                     # Return to playground screen
                     self.current_screen = "playground"
@@ -304,11 +325,16 @@ class App:
                 elif self.survival.lives == 0 and self.survival.game_over_button_rect.collidepoint(event.pos):
                     self.current_screen = "playground"
                     self.survival = None
+            if self.current_screen == "database_search" and self.database_search:
+                if self.database_search.return_to_menu_rect.collidepoint(event.pos):
+                    self.current_screen = "playground"
+                    self.database_search = None
 
         # Handle mouse motion for hover effect in playground screen
         if event.type == pygame.MOUSEMOTION and self.current_screen == "playground":
             self.gamemode1.check_hover(event.pos)
             self.gamemode2.check_hover(event.pos)
+            self.database_button_hovered = self.database_button_rect.collidepoint(event.pos)
             self.button_hovered = self.button_rect.collidepoint(event.pos)
             self.music_hovered = self.music_rect.collidepoint(event.pos)
 
@@ -323,6 +349,11 @@ class App:
             if event_result == "return_to_menu":
                 self.current_screen = "playground"
                 self.survival = None
+        if self.current_screen == "database_search" and self.database_search:
+            event_result = self.database_search.on_event(event)
+            if event_result == "return_to_menu":
+                self.current_screen = "playground"
+                self.database_search = None
 
     def update_layout(self):
         # Recalculate scaling factor
@@ -350,6 +381,15 @@ class App:
         self.gamemode2.x = int(self.width * 0.65)
         self.gamemode2.y = int(self.height * 0.5)
         self.gamemode2.size = int(self.gamemode2.base_size * scale_factor)
+
+        button_width = int(180 * scale_factor)
+        button_height = int(40 * scale_factor)
+        self.database_button_rect = pygame.Rect(
+            10*scale_factor,  # Left margin
+            10*scale_factor,  # Bottom margin
+            button_width,
+            button_height
+        )
 
     def on_loop(self):
         if self.current_screen == "time_trial" and self.time_trial:
@@ -388,6 +428,14 @@ class App:
             music_text_surface = music_font.render(music_text, True, text_color)
             music_text_rect = music_text_surface.get_rect(center=self.music_rect.center)
             self._display_surf.blit(music_text_surface, music_text_rect)
+
+            button_color = (100, 100, 100) if self.database_button_hovered else (169, 169, 169)
+            pygame.draw.rect(self._display_surf, button_color, self.database_button_rect, border_radius=int(10 * scale_factor))
+            database_text = "DATABASE"
+            database_font = pygame.font.Font('freesansbold.ttf', font_size)  # Reuse the same font size as other buttons
+            database_text_surface = database_font.render(database_text, True, (255, 255, 255) if self.dark_mode else (0, 0, 0))
+            database_text_rect = database_text_surface.get_rect(center=self.database_button_rect.center)
+            self._display_surf.blit(database_text_surface, database_text_rect)
 
             # Set the transparent playground surface with rounded corners
             playground_surface = pygame.Surface((self.playground_rect.width, self.playground_rect.height), pygame.SRCALPHA)
@@ -487,6 +535,8 @@ class App:
             self.time_trial.run_once(self._display_surf)
         elif self.current_screen == "survival" and self.survival:
             self.survival.run_once(self._display_surf)
+        elif self.current_screen == "database_search" and self.database_search:
+            self.database_search.run_once(self._display_surf)
 
         pygame.display.flip()
 

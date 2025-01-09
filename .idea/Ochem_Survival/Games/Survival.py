@@ -9,8 +9,6 @@ from io import BytesIO
 
 class Survival:
     def __init__(self, width, height, playground_rect, base_path, current_background, dark_mode, music_play, music_rect, button_rect):
-        # Most of the existing initialization remains the same
-        # Remove timer-related initializations
         self.playground_rect = playground_rect
         self.scale_factor = min(width / 1600, height / 1000)
         self.width = width
@@ -542,8 +540,8 @@ class Survival:
             #     top=button_rect.bottom + 10
             # )
             # surface.blit(formula_surface, formula_rect)
-
-        if self.feedback_displayed:
+        current_time = time.time()
+        if self.feedback_displayed and current_time - self.feedback_start >= self.feedback_duration:
             self.select_random_minigame()
             self.load_new_question()
 
@@ -598,8 +596,8 @@ class Survival:
             if self.cached_images[i]:
                 image_rect = self.cached_images[i].get_rect(center=button_rect.center)
                 surface.blit(self.cached_images[i], image_rect)
-
-        if self.feedback_displayed:
+        current_time = time.time()
+        if self.feedback_displayed and current_time - self.feedback_start >= self.feedback_duration:
             self.select_random_minigame()
             self.load_new_question()
 
@@ -656,8 +654,8 @@ class Survival:
                 center=(self.playground_rect.centerx, instructions_rect.centery + structure_image.get_height() // 2 + self.scale_factor * 40)
             )
             surface.blit(structure_image, image_rect)
-
-        if self.feedback_displayed:
+        curent_time = time.time()
+        if self.feedback_displayed and current_time - self.feedback_start >= self.feedback_duration:
             self.select_random_minigame()
             self.load_new_question()
 
