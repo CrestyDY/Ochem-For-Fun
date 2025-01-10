@@ -309,7 +309,6 @@ class App:
                     )
                     self.time_trial.start_timer()
 
-            # Handle return to menu from time trial
             if self.current_screen == "time_trial" and self.time_trial:
                 if self.time_trial.return_to_menu_rect.collidepoint(event.pos):
                     self.current_screen = "playground"

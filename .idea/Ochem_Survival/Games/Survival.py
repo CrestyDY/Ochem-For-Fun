@@ -130,10 +130,7 @@ class Survival:
         lives_rect.y = self.playground_rect.y
         surface.blit(lives_surface, lives_rect)
     def resize(self, new_width, new_height):
-        """
-        Comprehensive window resizing method
-        """
-        # Update width, height, and size
+
         self.width = new_width
         self.height = new_height
         self.size = (new_width, new_height)
@@ -165,10 +162,7 @@ class Survival:
             self.rescale_cached_images()
 
     def rescale_cached_images(self):
-        """
-        Rescale cached images based on current button dimensions
-        This method can be called during window resize events
-        """
+
         if not self.current_compounds:
             return
 
@@ -204,9 +198,7 @@ class Survival:
                 self.cached_images.append(None)
 
     def initialize_ui_elements(self):
-        """
-        Reinitialize all UI elements with proper scaling
-        """
+
         # Calculate scaled dimensions
         scale_factor = self.scale_factor
 
@@ -337,21 +329,19 @@ class Survival:
         playground_height = self.playground_rect.height
 
         # Dynamically calculate button sizes based on playground dimensions
-        button_width = int(playground_width * 0.20)  # 22% of playground width
-        button_height = int(playground_height * 0.31)  # 30% of playground height
-        button_margin = int(playground_width * 0.03)  # 2% of playground width for margin
+        button_width = int(playground_width * 0.20)
+        button_height = int(playground_height * 0.31)
+        button_margin = int(playground_width * 0.03)
 
-        # Calculate starting x and y to center the grid in the playground
         total_grid_width = 2 * button_width + button_margin
         total_grid_height = 2 * button_height + button_margin
 
         start_x = self.playground_rect.x + (self.playground_rect.width - total_grid_width) // 2
         start_y = self.playground_rect.y + (self.playground_rect.height - total_grid_height) // 1.60
 
-        # Adjust for Structure To Name minigame
         if self.current_minigame == "Structure To Name":
             button_width = int(playground_width * 0.40)
-            button_height = int(playground_height * 0.15)  # Shorter for text
+            button_height = int(playground_height * 0.15)
             button_margin = int(playground_width * 0.02)
 
             start_x = self.playground_rect.x + (self.playground_rect.width - (2 * button_width) - button_margin) // 2
