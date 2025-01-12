@@ -3,4 +3,3 @@ rdkit
 pillow
 openpyxl
 pandas
-sqlite3
