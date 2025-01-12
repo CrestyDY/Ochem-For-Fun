@@ -71,6 +71,16 @@ class Database_Search:
         self.detail_width = 800
         self.detail_height = 500
 
+        back_button_width = 100
+        back_button_height = 40
+        self.back_button_rect = pygame.Rect(
+            self.playground_rect.left + 20,
+            self.playground_rect.top + 20,
+            back_button_width,
+            back_button_height
+        )
+        self.back_button_hovered = False
+
     def on_event(self, event):
         if event.type == MOUSEBUTTONDOWN:
             # Check if search box is clicked
@@ -94,6 +104,11 @@ class Database_Search:
                         # Load molecule image directly from binary data
                         self.molecule_image = self.load_and_scale_image(result[3])
 
+            if self.detail_view and self.back_button_rect.collidepoint(event.pos):
+                self.detail_view = False
+                self.current_molecule = None
+                self.molecule_image = None
+
             # Check if return to menu button is clicked
             if self.return_to_menu_rect.collidepoint(event.pos):
                 return "return_to_menu"
@@ -111,6 +126,7 @@ class Database_Search:
             self.button_hovered = self.button_rect.collidepoint(event.pos)
             self.music_hovered = self.music_rect.collidepoint(event.pos)
             self.return_button_hovered = self.return_to_menu_rect.collidepoint(event.pos)
+            self.back_button_hovered = self.back_button_rect.collidepoint(event.pos)
             self.result_hover_states = []
             for i, _ in enumerate(self.search_results):
                 result_rect = pygame.Rect(
@@ -223,6 +239,15 @@ class Database_Search:
             button_height
         )
 
+        back_button_width = int(100 * self.scale_factor)
+        back_button_height = int(40 * self.scale_factor)
+        self.back_button_rect = pygame.Rect(
+            self.playground_rect.left + int(20 * self.scale_factor),
+            self.playground_rect.top + int(20 * self.scale_factor),
+            back_button_width,
+            back_button_height
+        )
+
         font_size = max(10, int(32 * self.scale_factor))
         results_font_size = max(10, int(24 * self.scale_factor))
         self.font = pygame.font.SysFont('comicsansms', font_size)
@@ -309,12 +334,23 @@ class Database_Search:
             display_surface.blit(placeholder, placeholder_rect)
 
         scale_factor = self.scale_factor
-        # Draw search results
+
         if self.detail_view and self.current_molecule:
-            # Create detail view rectangle
+
+            back_button_color = (100, 100, 100) if self.back_button_hovered else (169, 169, 169)
+            pygame.draw.rect(
+                display_surface,
+                back_button_color,
+                self.back_button_rect,
+                border_radius=10
+            )
+            back_text = self.results_font.render("Back", True, (0, 0, 0))
+            back_rect = back_text.get_rect(center=self.back_button_rect.center)
+            display_surface.blit(back_text, back_rect)
+
             detail_rect = pygame.Rect(
                 self.playground_rect.centerx - (self.detail_width * self.scale_factor) / 2,
-                self.playground_rect.top + 150 * self.scale_factor,
+                self.playground_rect.top + 180 * self.scale_factor,
                 self.detail_width * self.scale_factor,
                 self.detail_height * self.scale_factor
             )
