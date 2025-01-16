@@ -6,14 +6,14 @@ def quick_sort_nested(ls):
     if len(ls) <= 1:
         return ls
 
-    # Separate lists where index 1 has the string '<0'
+    
     string_less_than_zero = [x for x in ls if isinstance(x[1], str) and x[1] == '<0']
 
-    # Separate numeric values and non-'<0' strings
+    
     numeric_values = [x for x in ls if isinstance(x[1], (int, float))]
     other_strings = [x for x in ls if isinstance(x[1], str) and x[1] != '<0']
 
-    # Quicksort the numeric values
+    
     if len(numeric_values) <= 1:
         return string_less_than_zero + numeric_values + other_strings
 
@@ -23,7 +23,7 @@ def quick_sort_nested(ls):
     middle = [x for x in numeric_values if x[1] == mid]
     right = [x for x in numeric_values if x[1] > mid]
 
-    # Combine the sorted sections
+    
     return string_less_than_zero + quick_sort_nested(left) + middle + quick_sort_nested(right) + other_strings
 
 

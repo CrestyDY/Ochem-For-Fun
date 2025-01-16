@@ -2,22 +2,22 @@ import os
 import openpyxl
 import pandas as pd
 
-# Get the base path of the script
+
 base_path = os.path.dirname(os.path.abspath(__file__))
 
-# Create the full path to the Excel file
+
 excel_file_path = os.path.join(base_path, "ochem.xlsx")
 
-# Load the workbook using the full path
+
 dataframe = openpyxl.load_workbook(excel_file_path)
 
-# Rest of your existing code remains the same
-# Define variable to read sheet
+
+
 dataframe1 = dataframe.active
 
 my_data = []
 
-# Iterate the loop to read the cell values
+
 for row in dataframe1.iter_rows(0, dataframe1.max_row):
     my_data.append([cell.value for cell in row])
 

@@ -19,16 +19,16 @@ class Database_Search:
         self.music_rect = music_rect
         self.button_rect = button_rect
 
-        # Initialize hover states
+        
         self.button_hovered = False
         self.music_hovered = False
         self.return_button_hovered = False
 
-        # Initialize SQLite connection
+        
         self.conn = sqlite3.connect('ochem.db')
         self.cursor = self.conn.cursor()
 
-        # Search box properties
+        
         self.search_box = pygame.Rect(
             self.playground_rect.centerx - 200,
             self.playground_rect.top + 100,
@@ -38,11 +38,11 @@ class Database_Search:
         self.search_text = ""
         self.search_active = False
 
-        # Search results properties
+        
         self.search_results = []
         self.selected_result = None
 
-        # Create return to menu button
+        
         button_width = 200
         button_height = 50
         self.return_to_menu_rect = pygame.Rect(
@@ -52,7 +52,7 @@ class Database_Search:
             button_height
         )
 
-        # Font initialization
+        
         self.font = pygame.font.SysFont('comicsansms', 32)
         self.results_font = pygame.font.SysFont('comicsansms', 24)
 
@@ -67,7 +67,7 @@ class Database_Search:
         self.detail_rect = None
         self.molecule_image = None
 
-        # Define detail view dimensions
+        
         self.detail_width = 800
         self.detail_height = 500
 
@@ -83,7 +83,7 @@ class Database_Search:
 
     def on_event(self, event):
         if event.type == MOUSEBUTTONDOWN:
-            # Check if search box is clicked
+            
             if self.search_box.collidepoint(event.pos):
                 self.search_active = True
             else:
@@ -101,7 +101,7 @@ class Database_Search:
                         self.selected_result = result
                         self.detail_view = True
                         self.current_molecule = result
-                        # Load molecule image directly from binary data
+                        
                         self.molecule_image = self.load_and_scale_image(result[3])
 
             if self.detail_view and self.back_button_rect.collidepoint(event.pos):
@@ -109,7 +109,7 @@ class Database_Search:
                 self.current_molecule = None
                 self.molecule_image = None
 
-            # Check if return to menu button is clicked
+            
             if self.return_to_menu_rect.collidepoint(event.pos):
                 return "return_to_menu"
 
@@ -117,12 +117,12 @@ class Database_Search:
             width, height = event.size
             display_surface = pygame.display.set_mode((width, height), RESIZABLE)
             self.resize_elements(width, height)
-            # Reload current molecule image with new scale if in detail view
+            
             if self.detail_view and self.current_molecule:
                 self.molecule_image = self.load_and_scale_image(self.current_molecule[3])
 
         elif event.type == MOUSEMOTION:
-            # Update hover states
+            
             self.button_hovered = self.button_rect.collidepoint(event.pos)
             self.music_hovered = self.music_rect.collidepoint(event.pos)
             self.return_button_hovered = self.return_to_menu_rect.collidepoint(event.pos)
@@ -155,10 +155,10 @@ class Database_Search:
             return None
 
         try:
-            # Open image from binary data using PIL
+            
             pil_image = Image.open(BytesIO(image_data))
 
-            # Calculate scaled dimensions for detail view
+            
             scale = min(
                 (self.detail_width * 0.6 * self.scale_factor) / pil_image.width,
                 (self.detail_height * 0.6 * self.scale_factor) / pil_image.height
@@ -169,10 +169,10 @@ class Database_Search:
                 int(pil_image.height * scale)
             )
 
-            # Resize image
+            
             pil_image = pil_image.resize(new_size, Image.Resampling.LANCZOS)
 
-            # Convert to pygame surface
+            
             mode = pil_image.mode
             size = pil_image.size
             data = pil_image.tobytes()
@@ -205,21 +205,21 @@ class Database_Search:
         return pygame.image.load(io.BytesIO(byte_array.read()))
 
     def resize_elements(self, new_width, new_height):
-        # Update instance variables
+        
         self.width = new_width
         self.height = new_height
 
-        # Calculate new scale factor
+        
         self.scale_factor = min(new_width / 1600, new_height / 1000)
 
-        # Update playground rectangle
+        
         playground_width = int(new_width * 0.8)
         playground_height = int(new_height * 0.8)
         playground_x = (new_width - playground_width) // 2
         playground_y = (new_height - playground_height) // 2
         self.playground_rect = pygame.Rect(playground_x, playground_y, playground_width, playground_height)
 
-        # Update search box
+        
         search_box_width = min(400, int(playground_width * 0.6))
         search_box_height = int(50 * self.scale_factor)
         self.search_box = pygame.Rect(
@@ -229,7 +229,7 @@ class Database_Search:
             search_box_height
         )
 
-        # Update return to menu button
+        
         button_width = int(200 * self.scale_factor)
         button_height = int(50 * self.scale_factor)
         self.return_to_menu_rect = pygame.Rect(
@@ -263,7 +263,7 @@ class Database_Search:
                 LIMIT 10
             """, (search_query, search_query))
             self.search_results = self.cursor.fetchall()
-            self.result_hover_states = [False] * len(self.search_results)  # Initialize hover states for new results
+            self.result_hover_states = [False] * len(self.search_results)  
         except sqlite3.Error as e:
             print(f"Database error: {e}")
             self.search_results = []
@@ -275,10 +275,10 @@ class Database_Search:
         return text[:max_length] + '...'
 
     def run_once(self, display_surface):
-        # Draw background
+        
         display_surface.blit(self.current_background.image, self.current_background.rect)
 
-        # Draw top buttons (light/dark mode and music)
+        
         scale_factor = min(self.width / 1600, self.height / 1000)
         font_size = max(10, int(20 * scale_factor))
 
@@ -290,7 +290,7 @@ class Database_Search:
         230, 230, 230)
         pygame.draw.rect(display_surface, music_button_color, self.music_rect, border_radius=10)
 
-        # Button text
+        
         text_color = (255, 255, 255) if self.dark_mode else (0, 0, 0)
         button_font = pygame.font.Font('freesansbold.ttf', font_size)
 
@@ -304,7 +304,7 @@ class Database_Search:
         music_text_rect = music_text_surface.get_rect(center=self.music_rect.center)
         display_surface.blit(music_text_surface, music_text_rect)
 
-        # Draw playground background
+        
         playground_surface = pygame.Surface(
             (self.playground_rect.width, self.playground_rect.height),
             pygame.SRCALPHA
@@ -318,16 +318,16 @@ class Database_Search:
         )
         display_surface.blit(playground_surface, self.playground_rect)
 
-        # Draw search box
+        
         box_color = (200, 200, 200) if self.search_active else (169, 169, 169)
         pygame.draw.rect(display_surface, box_color, self.search_box, border_radius = 5)
 
-        # Draw search text
+        
         text_surface = self.font.render(self.search_text, True, (0, 0, 0))
         text_rect = text_surface.get_rect(center=self.search_box.center)
         display_surface.blit(text_surface, text_rect)
 
-        # Draw placeholder text if search box is empty
+        
         if not self.search_text and not self.search_active:
             placeholder = self.font.render("Search molecules...", True, (100, 100, 100))
             placeholder_rect = placeholder.get_rect(center=self.search_box.center)
@@ -355,27 +355,27 @@ class Database_Search:
                 self.detail_height * scale_factor
             )
 
-            # Draw detail view background
+            
             pygame.draw.rect(display_surface, (200, 200, 200), detail_rect, border_radius=10)
 
-            # Draw molecule image if available
+            
             if self.molecule_image:
                 image_rect = self.molecule_image.get_rect()
                 image_rect.centerx = detail_rect.centerx
                 image_rect.top = detail_rect.top + 20 * self.scale_factor
                 display_surface.blit(self.molecule_image, image_rect)
 
-            # Draw molecule information
+            
             formula, ph, iupac, _ = self.current_molecule
 
-            # Draw IUPAC name
+            
             iupac_text = self.results_font.render(f"IUPAC: {iupac}", True, (0, 0, 0))
             iupac_rect = iupac_text.get_rect()
             iupac_rect.centerx = detail_rect.centerx
             iupac_rect.top = image_rect.bottom + 20* scale_factor
             display_surface.blit(iupac_text, iupac_rect)
 
-            # Draw pH
+            
             ph_text = self.results_font.render(f"pH: {ph}", True, (0, 0, 0))
             ph_rect = ph_text.get_rect()
             ph_rect.centerx = detail_rect.centerx
@@ -383,7 +383,7 @@ class Database_Search:
             display_surface.blit(ph_text, ph_rect)
 
         elif not self.detail_view:
-            # Existing search results drawing code...
+            
             for i, result in enumerate(self.search_results):
                 result_rect = pygame.Rect(
                     self.search_box.centerx - (self.search_box.width + 400 * self.scale_factor) / 2,
@@ -392,25 +392,25 @@ class Database_Search:
                     45 * self.scale_factor
                 )
 
-                # Determine button color based on hover and selection state
+                
                 if self.result_hover_states[i]:
-                    color = (100, 100, 100)  # Darker when hovered, like other buttons
+                    color = (100, 100, 100)  
                 elif result == self.selected_result:
-                    color = (169, 169, 169)  # Selected color
+                    color = (169, 169, 169)  
                 else:
-                    color = (230, 230, 230) if not self.dark_mode else (169, 169, 169)  # Normal color
+                    color = (230, 230, 230) if not self.dark_mode else (169, 169, 169)  
 
                 pygame.draw.rect(display_surface, color, result_rect,
-                                 border_radius=10)  # Changed border_radius to match other buttons
+                                 border_radius=10)  
 
-                # Display molecule information
+                
                 formula, ph, iupac, image = result
                 text = self.truncate_text(iupac)
                 text_surface = self.results_font.render(text, True, (0, 0, 0))
                 text_rect = text_surface.get_rect(center=result_rect.center)
                 display_surface.blit(text_surface, text_rect)
 
-        # Draw return to menu button
+        
         return_button_color = (100, 100, 100) if self.return_button_hovered else (169, 169, 169)
         pygame.draw.rect(
             display_surface,
@@ -423,5 +423,5 @@ class Database_Search:
         display_surface.blit(menu_text, menu_rect)
 
     def __del__(self):
-        # Close database connection when object is destroyed
+        
         self.conn.close()
