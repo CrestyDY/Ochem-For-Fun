@@ -224,7 +224,6 @@ class App:
         self._running = True
 
     def toggle_background(self):
-        "Toggle between light and dark backgrounds."
         if self.dark_mode:
             self.current_background = self.background_light
         else:
@@ -504,7 +503,7 @@ class App:
 
             
             subtitle_font = pygame.font.SysFont('comicsansms', int(self.base_subtitle_font_size * height_scale))
-            subtitle_text = "Are You Ready To Take On This Challenge ?"
+            subtitle_text = "A Fun Way To Learn Ochem !"
             subtitle_surface = subtitle_font.render(subtitle_text, True, (0, 0, 0) )
             subtitle_rect = subtitle_surface.get_rect()
             subtitle_rect.centerx = self.playground_rect.centerx

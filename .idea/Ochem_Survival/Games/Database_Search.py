@@ -349,10 +349,10 @@ class Database_Search:
             display_surface.blit(back_text, back_rect)
 
             detail_rect = pygame.Rect(
-                self.playground_rect.centerx - (self.detail_width * self.scale_factor) / 2,
-                self.playground_rect.top + 180 * self.scale_factor,
-                self.detail_width * self.scale_factor,
-                self.detail_height * self.scale_factor
+                self.playground_rect.centerx - (self.detail_width * scale_factor) / 2,
+                self.search_box.bottom + 50 * scale_factor,
+                self.detail_width * scale_factor,
+                self.detail_height * scale_factor
             )
 
             # Draw detail view background
@@ -372,7 +372,7 @@ class Database_Search:
             iupac_text = self.results_font.render(f"IUPAC: {iupac}", True, (0, 0, 0))
             iupac_rect = iupac_text.get_rect()
             iupac_rect.centerx = detail_rect.centerx
-            iupac_rect.top = detail_rect.bottom - 100 * self.scale_factor
+            iupac_rect.top = image_rect.bottom + 20* scale_factor
             display_surface.blit(iupac_text, iupac_rect)
 
             # Draw pH
